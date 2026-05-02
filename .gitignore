@@ -1,0 +1,24 @@
+# Website project (separate repo)
+nhl94/
+
+# ROM files
+*.bin
+*.smc
+*.sfc
+
+# User-supplied art
+cover.png
+
+# PyInstaller
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db

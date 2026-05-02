@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Conference Tab Concepts</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #EEF2F7;
+      color: #0D1B2A;
+      padding: 48px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 48px;
+    }
+
+    .concept {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .concept-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #4A6FA5;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #D8E2EE;
+      border-radius: 10px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94A3B8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* ── CONCEPT 1: Segmented control ── */
+
+    .seg {
+      display: inline-flex;
+      background: #EEF2F7;
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .seg button {
+      font-family: 'Roboto', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      background: transparent;
+      color: #4A6FA5;
+    }
+
+    .seg button.active {
+      background: #fff;
+      color: #0D1B2A;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+    }
+
+    /* Dark variant */
+    .seg.dark {
+      background: #1B2D45;
+    }
+
+    .seg.dark button {
+      color: #7A9CC4;
+    }
+
+    .seg.dark button.active {
+      background: #0D1B2A;
+      color: #F0F4F8;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    }
+
+    /* Blue variant */
+    .seg.blue {
+      background: #DBEAFE;
+    }
+
+    .seg.blue button {
+      color: #3B6FC4;
+    }
+
+    .seg.blue button.active {
+      background: #1D4ED8;
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(29,78,216,0.3);
+    }
+
+    /* ── CONCEPT 2: Ghost tabs with dot ── */
+
+    .dot-tabs {
+      display: flex;
+      gap: 4px;
+    }
+
+    .dot-tabs button {
+      font-family: 'Roboto', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+      color: #94A3B8;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      transition: all 0.15s ease;
+    }
+
+    .dot-tabs button:hover {
+      background: #F1F5F9;
+      color: #4A6FA5;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    /* active state: text dark, dot filled */
+    .dot-tabs button.active {
+      color: #0D1B2A;
+      background: transparent;
+    }
+
+    /* inactive: dot is just an outline ring */
+    .dot-tabs button:not(.active) .dot {
+      background: transparent;
+      outline: 2px solid currentColor;
+      outline-offset: -1px;
+      opacity: 0.3;
+    }
+
+    /* count badge */
+    .count {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+      margin-left: 2px;
+    }
+
+    .dot-tabs button.active .count {
+      background: #EEF2F7;
+      color: #4A6FA5;
+    }
+
+    .dot-tabs button:not(.active) .count {
+      background: #F1F5F9;
+      color: #94A3B8;
+    }
+
+    /* color set */
+    .c1 { background: #3B82F6; }
+    .c2 { background: #F59E0B; }
+    .c3 { background: #10B981; }
+    .c4 { background: #EF4444; }
+
+    /* Divider between sub-variants */
+    .divider {
+      height: 1px;
+      background: #EEF2F7;
+      margin: 4px 0;
+    }
+
+    /* context strip to show usage in situ */
+    .context {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .context-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .fake-label {
+      font-size: 11px;
+      color: #94A3B8;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .fake-input {
+      flex: 1;
+      height: 34px;
+      background: #fff;
+      border: 1px solid #D8E2EE;
+      border-radius: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CONCEPT 1 -->
+  <div class="concept">
+    <div class="concept-label">Option 1 — Segmented Control</div>
+    <div class="card">
+
+      <div class="card-label">Light track (default page bg)</div>
+      <div class="seg">
+        <button class="active">Eastern Conference</button>
+        <button>Western Conference</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">Dark track</div>
+      <div class="seg dark">
+        <button class="active">Eastern Conference</button>
+        <button>Western Conference</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">Blue active</div>
+      <div class="seg blue">
+        <button class="active">Eastern Conference</button>
+        <button>Western Conference</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">3 conferences — light track</div>
+      <div class="seg">
+        <button class="active">Eastern</button>
+        <button>Western</button>
+        <button>Pacific</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">In context</div>
+      <div class="context">
+        <div class="seg" style="align-self:flex-start">
+          <button class="active">Eastern Conference</button>
+          <button>Western Conference</button>
+        </div>
+        <div class="context-row">
+          <span class="fake-label">Away</span>
+          <div class="fake-input"></div>
+        </div>
+        <div class="context-row">
+          <span class="fake-label">Home</span>
+          <div class="fake-input"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONCEPT 2 -->
+  <div class="concept">
+    <div class="concept-label">Option 2 — Ghost Tabs with Colour Dot</div>
+    <div class="card">
+
+      <div class="card-label">2 conferences</div>
+      <div class="dot-tabs">
+        <button class="active">
+          <span class="dot c1"></span>
+          Eastern Conference
+          <span class="count">8</span>
+        </button>
+        <button>
+          <span class="dot c2"></span>
+          Western Conference
+          <span class="count">6</span>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">3 conferences</div>
+      <div class="dot-tabs">
+        <button class="active">
+          <span class="dot c1"></span>
+          Eastern
+          <span class="count">8</span>
+        </button>
+        <button>
+          <span class="dot c2"></span>
+          Western
+          <span class="count">6</span>
+        </button>
+        <button>
+          <span class="dot c3"></span>
+          Pacific
+          <span class="count">0</span>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">4 conferences</div>
+      <div class="dot-tabs">
+        <button class="active">
+          <span class="dot c1"></span>
+          East
+          <span class="count">4</span>
+        </button>
+        <button>
+          <span class="dot c2"></span>
+          West
+          <span class="count">4</span>
+        </button>
+        <button>
+          <span class="dot c3"></span>
+          North
+          <span class="count">4</span>
+        </button>
+        <button>
+          <span class="dot c4"></span>
+          South
+          <span class="count">0</span>
+        </button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="card-label">In context</div>
+      <div class="context">
+        <div class="dot-tabs">
+          <button class="active">
+            <span class="dot c1"></span>
+            Eastern Conference
+            <span class="count">8</span>
+          </button>
+          <button>
+            <span class="dot c2"></span>
+            Western Conference
+            <span class="count">6</span>
+          </button>
+        </div>
+        <div class="context-row">
+          <span class="fake-label">Away</span>
+          <div class="fake-input"></div>
+        </div>
+        <div class="context-row">
+          <span class="fake-label">Home</span>
+          <div class="fake-input"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

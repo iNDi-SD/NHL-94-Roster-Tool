@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHL '94 Online – Light Mode Concept</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* ─── TOKENS ─────────────────────────────────────────────────── */
+        :root {
+            /* Dark mode (current) */
+            --bg:          #1a1628;
+            --bg-surface:  #221e32;
+            --bg-table:    #2a2540;
+            --bg-row-alt:  #252040;
+            --bg-row:      #2a2540;
+            --bg-nav:      #1a1628;
+            --bg-input:    #221e32;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.55);
+            --text-muted:  rgba(255,255,255,0.35);
+            --border:      rgba(255,255,255,0.08);
+            --border-input: rgba(255,255,255,0.15);
+            --accent:      #3bff5c;
+            --accent-dark: #1edd40;
+            --accent-text: #0a1a00;
+            --tab-inactive: rgba(255,255,255,0.45);
+            --shadow:      0 2px 12px rgba(0,0,0,0.4);
+            --hero-overlay: linear-gradient(to bottom, rgba(26,22,40,0.35) 0%, rgba(26,22,40,0.55) 100%);
+            --nav-border:  rgba(255,255,255,0.06);
+            --dropdown-arrow: brightness(0) invert(1);
+        }
+
+        body.light {
+            --bg:          #f2f4f8;
+            --bg-surface:  #ffffff;
+            --bg-table:    #ffffff;
+            --bg-row-alt:  #f7f8fb;
+            --bg-row:      #ffffff;
+            --bg-nav:      #ffffff;
+            --bg-input:    #ffffff;
+            --text-primary: #12111a;
+            --text-secondary: #5a5870;
+            --text-muted:  #9896aa;
+            --border:      #e2e1ea;
+            --border-input: #cac9d8;
+            --accent:      #15a832;
+            --accent-dark: #0f8226;
+            --accent-text: #ffffff;
+            --tab-inactive: #9896aa;
+            --shadow:      0 2px 12px rgba(0,0,0,0.07);
+            --hero-overlay: linear-gradient(to bottom, rgba(242,244,248,0.2) 0%, rgba(242,244,248,0.5) 100%);
+            --nav-border:  #e2e1ea;
+            --dropdown-arrow: none;
+        }
+
+        /* ─── RESET ──────────────────────────────────────────────────── */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            transition: background 0.25s, color 0.25s;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ─── MODE TOGGLE ────────────────────────────────────────────── */
+        .mode-bar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 0.6rem 1rem;
+            font-size: 0.8rem;
+            color: #fff;
+        }
+        body.light .mode-bar { background: rgba(30,30,30,0.85); }
+        .mode-bar strong { opacity: 0.7; }
+        .mode-toggle {
+            display: flex;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .mode-toggle button {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            padding: 0.3rem 1rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-family: 'Roboto', sans-serif;
+            transition: all 0.2s;
+        }
+        .mode-toggle button.active {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+
+        /* ─── NAV ────────────────────────────────────────────────────── */
+        .nav {
+            background: var(--bg-nav);
+            border-bottom: 1px solid var(--nav-border);
+            padding: 0 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            height: 56px;
+            transition: background 0.25s, border-color 0.25s;
+            position: sticky;
+            top: 36px;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            width: 38px;
+            height: 38px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.55rem;
+            text-align: center;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+
+        body.light .nav-logo {
+            background: #12111a;
+            color: #fff;
+        }
+        body:not(.light) .nav-logo {
+            background: #fff;
+            color: #12111a;
+        }
+
+        .nav-link {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 0.25rem 0;
+            opacity: 0.85;
+        }
+        .nav-link:hover { opacity: 1; }
+
+        .nav-leagues {
+            background: var(--accent);
+            color: var(--accent-text);
+            padding: 0.3rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-decoration: none;
+            letter-spacing: 0.2px;
+        }
+
+        .nav-spacer { flex: 1; }
+
+        .nav-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--border-input);
+            border: 2px solid var(--border);
+        }
+
+        /* ─── PAGE ───────────────────────────────────────────────────── */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* ─── HERO ───────────────────────────────────────────────────── */
+        .hero {
+            position: relative;
+            height: 680px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center 30%;
+        }
+
+        /* Simulate the hockey rink image with a gradient placeholder */
+        .hero-bg-sim {
+            position: absolute;
+            inset: 0;
+            background:
+                var(--hero-overlay),
+                linear-gradient(135deg, #2c4a6e 0%, #1a3050 25%, #6e8c6e 50%, #3a5a3a 75%, #2a3a2a 100%);
+        }
+
+        body.light .hero-bg-sim {
+            background:
+                var(--hero-overlay),
+                linear-gradient(135deg, #5a8fbf 0%, #4a7aaa 25%, #7aaa8a 50%, #5a9a6a 75%, #4a7a5a 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 0 2rem;
+        }
+
+        .hero-title {
+            font-family: 'Roboto Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 4rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: #fff;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.6);
+            line-height: 1;
+        }
+
+        body.light .hero-title {
+            color: #fff;
+            text-shadow: 0 2px 16px rgba(0,0,0,0.5);
+        }
+
+        .hero-sub {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.92);
+            text-shadow: 0 1px 6px rgba(0,0,0,0.4);
+            font-weight: 400;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            align-items: center;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            color: var(--accent-text);
+            font-family: 'Roboto Condensed', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            border-radius: 40px;
+            border: none;
+            cursor: pointer;
+            text-shadow: none;
+            box-shadow: 0 4px 24px rgba(59,255,92,0.35);
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        body.light .hero-cta {
+            box-shadow: 0 4px 20px rgba(21,168,50,0.3);
+        }
+
+        .hero-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 28px rgba(59,255,92,0.45);
+        }
+
+        .hero-socials {
+            display: flex;
+            gap: 1.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .social-icon {
+            width: 30px;
+            height: 30px;
+            opacity: 0.85;
+            filter: brightness(0) invert(1);
+            transition: opacity 0.2s;
+        }
+        .social-icon:hover { opacity: 1; }
+
+        /* Social icon SVG placeholders */
+        .social-svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+            opacity: 0.85;
+            cursor: pointer;
+        }
+        .social-svg:hover { opacity: 1; }
+
+        /* ─── LEAGUE PAGE ────────────────────────────────────────────── */
+        .league-page {
+            min-height: calc(100vh - 56px - 36px);
+            padding-bottom: 0;
+        }
+
+        /* Filter bar */
+        .filter-bar {
+            padding: 1.25rem 2rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper select {
+            appearance: none;
+            background: var(--bg-input);
+            border: 1px solid var(--border-input);
+            color: var(--text-primary);
+            padding: 0.6rem 2.5rem 0.6rem 1rem;
+            font-size: 0.9rem;
+            font-family: 'Roboto', sans-serif;
+            cursor: pointer;
+            min-width: 200px;
+            outline: none;
+            border-radius: 2px;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 0.9rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 6px;
+            background: var(--text-secondary);
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            pointer-events: none;
+        }
+
+        /* Tabs */
+        .tabs {
+            padding: 0 2rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 0.8rem 1.25rem 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            color: var(--tab-inactive);
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            transition: color 0.2s;
+            margin-bottom: -1px;
+            user-select: none;
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab:hover:not(.active) {
+            color: var(--text-primary);
+        }
+
+        /* League heading */
+        .league-heading {
+            padding: 0 2rem 1.5rem;
+        }
+
+        .league-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .league-division {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        /* Standings table */
+        .table-wrap {
+            margin: 0 2rem 2rem;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            overflow-x: auto;
+            background: var(--bg-table);
+            box-shadow: var(--shadow);
+            transition: background 0.25s, border-color 0.25s;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+
+        thead {
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            text-align: left;
+            padding: 0.75rem 0.75rem;
+            font-weight: 700;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            background: var(--bg-table);
+        }
+
+        th:first-child { padding-left: 1rem; }
+
+        td {
+            padding: 0.6rem 0.75rem;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+
+        td:first-child { padding-left: 1rem; }
+
+        tbody tr:nth-child(even) td {
+            background: var(--bg-row-alt);
+        }
+        tbody tr:nth-child(odd) td {
+            background: var(--bg-row);
+        }
+
+        tbody tr:hover td {
+            filter: brightness(1.05);
+        }
+
+        body.light tbody tr:hover td {
+            background: #eef0f5 !important;
+        }
+
+        .team-logo {
+            width: 28px;
+            height: 28px;
+            background: var(--border-input);
+            border-radius: 2px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .stat-num {
+            font-variant-numeric: tabular-nums;
+            font-size: 0.85rem;
+        }
+
+        /* Playoff cutoff line */
+        .playoff-row td {
+            border-top: 2px dashed var(--accent) !important;
+        }
+
+        /* ─── SCHEDULE PAGE ──────────────────────────────────────────── */
+        .coach-card {
+            margin: 0 2rem 1.5rem;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            background: var(--bg-surface);
+            display: flex;
+            align-items: flex-start;
+            gap: 1.5rem;
+            padding: 1.25rem;
+            box-shadow: var(--shadow);
+            transition: background 0.25s, border-color 0.25s;
+        }
+
+        .coach-logo {
+            width: 90px;
+            height: 90px;
+            flex-shrink: 0;
+            background: var(--bg-table);
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .coach-info {
+            flex: 1;
+        }
+
+        .coach-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .coach-division {
+            font-size: 0.85rem;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 0.4rem;
+        }
+
+        .coach-record {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .coach-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem 1.5rem;
+            margin-left: auto;
+            min-width: 320px;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            margin-bottom: 0.15rem;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Upload button */
+        .btn-upload {
+            background: var(--accent);
+            color: var(--accent-text);
+            border: none;
+            padding: 0.35rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: opacity 0.15s;
+            white-space: nowrap;
+        }
+        .btn-upload:hover { opacity: 0.85; }
+
+        /* ─── FOOTER ─────────────────────────────────────────────────── */
+        footer {
+            background: var(--bg-nav);
+            border-top: 1px solid var(--nav-border);
+            padding: 2.5rem 2rem;
+            display: grid;
+            grid-template-columns: auto 1fr 1fr auto;
+            gap: 2rem;
+            align-items: start;
+            transition: background 0.25s;
+            margin-top: 3rem;
+        }
+
+        .footer-logo {
+            width: 80px;
+            height: 80px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.55rem;
+            text-align: center;
+            line-height: 1.2;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+        }
+
+        body.light .footer-logo { background: #12111a; color: #fff; }
+        body:not(.light) .footer-logo { background: #fff; color: #12111a; }
+
+        .footer-col a {
+            display: block;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 0.75rem;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .footer-col a:hover { color: var(--text-primary); }
+
+        .footer-socials {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .footer-social-icon {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-secondary);
+            transition: fill 0.2s;
+            cursor: pointer;
+        }
+        .footer-social-icon:hover { fill: var(--text-primary); }
+
+        /* ─── PAGE NAV TABS (demo) ───────────────────────────────────── */
+        .demo-tabs {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 999;
+        }
+
+        .demo-tab {
+            background: rgba(0,0,0,0.8);
+            color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 0.4rem 0.9rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border-radius: 3px;
+            font-family: 'Roboto', sans-serif;
+            text-align: right;
+            transition: all 0.2s;
+            backdrop-filter: blur(8px);
+        }
+        .demo-tab.active, .demo-tab:hover {
+            background: rgba(59,255,92,0.15);
+            color: #fff;
+            border-color: rgba(59,255,92,0.4);
+        }
+        body.light .demo-tab {
+            background: rgba(255,255,255,0.9);
+            color: #555;
+            border-color: #ccc;
+        }
+        body.light .demo-tab.active, body.light .demo-tab:hover {
+            background: rgba(21,168,50,0.1);
+            color: #111;
+            border-color: rgba(21,168,50,0.4);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Mode toggle bar -->
+<div class="mode-bar">
+    <strong>NHL '94 Online — Light Mode Concept</strong>
+    <div class="mode-toggle">
+        <button id="btn-dark" onclick="setMode('dark')" class="active">Dark (current)</button>
+        <button id="btn-light" onclick="setMode('light')">Light (new)</button>
+    </div>
+</div>
+
+<!-- Nav -->
+<nav class="nav" style="margin-top:36px;">
+    <div class="nav-logo">NHL<br>'94</div>
+    <a href="#" class="nav-link">Home</a>
+    <a href="#" class="nav-leagues">Leagues</a>
+    <div class="nav-spacer"></div>
+    <div class="nav-avatar"></div>
+</nav>
+
+<!-- HOME PAGE -->
+<div class="page active" id="page-home">
+    <div class="hero">
+        <div class="hero-bg-sim"></div>
+        <div class="hero-content">
+            <div class="hero-title">NHL 94 Online</div>
+            <div class="hero-sub">Join online leagues and tournaments today!</div>
+            <button class="hero-cta">Join the Action</button>
+            <div class="hero-socials">
+                <!-- Twitch -->
+                <svg class="social-svg" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                <!-- Discord -->
+                <svg class="social-svg" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.078.11 18.1.128 18.11a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+                <!-- Instagram -->
+                <svg class="social-svg" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                <!-- X/Twitter -->
+                <svg class="social-svg" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-logo">NHL<br>'94</div>
+        <div class="footer-col">
+            <a href="#">Leagues</a>
+            <a href="#">Downloads</a>
+            <a href="#">Getting Started</a>
+        </div>
+        <div class="footer-col">
+            <a href="#">Contact</a>
+            <a href="#">Rules &amp; Policies</a>
+            <a href="#">FAQ</a>
+        </div>
+        <div class="footer-socials">
+            <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+            <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.078.11 18.1.128 18.11a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+            <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+            <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </div>
+    </footer>
+</div>
+
+<!-- STANDINGS PAGE -->
+<div class="page" id="page-standings">
+    <div class="league-page">
+
+        <div class="filter-bar">
+            <div class="select-wrapper">
+                <select>
+                    <option>-- Select League</option>
+                    <option selected>Pro League Season 4</option>
+                    <option>Casual League</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select>
+                    <option>-- Select Division</option>
+                    <option selected>East Division</option>
+                    <option>West Division</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="setTab(this)">Standings</div>
+            <div class="tab" onclick="setTab(this)">Schedule</div>
+            <div class="tab" onclick="setTab(this)">Playoffs</div>
+        </div>
+
+        <div class="league-heading">
+            <div class="league-name">Pro League Season 4</div>
+            <div class="league-division">East Division</div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>Team</th>
+                        <th>Coach</th>
+                        <th>GP</th>
+                        <th>W</th>
+                        <th>L</th>
+                        <th>T</th>
+                        <th>PTS</th>
+                        <th>GF</th>
+                        <th>GA</th>
+                        <th>GF/G</th>
+                        <th>Last 10</th>
+                        <th>Home</th>
+                        <th>Away</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Mighty Ducks</td>
+                        <td>GriffeyJr</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">21</td>
+                        <td class="stat-num">5</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>44</strong></td>
+                        <td class="stat-num">112</td>
+                        <td class="stat-num">64</td>
+                        <td class="stat-num">4.00</td>
+                        <td class="stat-num">8-2-0</td>
+                        <td class="stat-num">12-2-1</td>
+                        <td class="stat-num">9-3-1</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Detroit Red Wings</td>
+                        <td>Evan</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">19</td>
+                        <td class="stat-num">7</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>40</strong></td>
+                        <td class="stat-num">101</td>
+                        <td class="stat-num">72</td>
+                        <td class="stat-num">3.61</td>
+                        <td class="stat-num">7-3-0</td>
+                        <td class="stat-num">11-3-0</td>
+                        <td class="stat-num">8-4-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Pittsburgh Penguins</td>
+                        <td>IceDog87</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">17</td>
+                        <td class="stat-num">9</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>36</strong></td>
+                        <td class="stat-num">95</td>
+                        <td class="stat-num">79</td>
+                        <td class="stat-num">3.39</td>
+                        <td class="stat-num">6-4-0</td>
+                        <td class="stat-num">10-4-0</td>
+                        <td class="stat-num">7-5-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Boston Bruins</td>
+                        <td>BlkBear</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">16</td>
+                        <td class="stat-num">10</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>34</strong></td>
+                        <td class="stat-num">89</td>
+                        <td class="stat-num">83</td>
+                        <td class="stat-num">3.18</td>
+                        <td class="stat-num">6-4-0</td>
+                        <td class="stat-num">9-5-0</td>
+                        <td class="stat-num">7-5-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Montreal Canadiens</td>
+                        <td>Habs4Ever</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">15</td>
+                        <td class="stat-num">11</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>32</strong></td>
+                        <td class="stat-num">84</td>
+                        <td class="stat-num">85</td>
+                        <td class="stat-num">3.00</td>
+                        <td class="stat-num">5-5-0</td>
+                        <td class="stat-num">9-5-0</td>
+                        <td class="stat-num">6-6-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Toronto Maple Leafs</td>
+                        <td>Mapleleaf</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">14</td>
+                        <td class="stat-num">12</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>30</strong></td>
+                        <td class="stat-num">79</td>
+                        <td class="stat-num">88</td>
+                        <td class="stat-num">2.82</td>
+                        <td class="stat-num">5-5-0</td>
+                        <td class="stat-num">8-6-0</td>
+                        <td class="stat-num">6-6-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>New York Rangers</td>
+                        <td>NYRfan</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">13</td>
+                        <td class="stat-num">13</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>28</strong></td>
+                        <td class="stat-num">75</td>
+                        <td class="stat-num">90</td>
+                        <td class="stat-num">2.68</td>
+                        <td class="stat-num">4-6-0</td>
+                        <td class="stat-num">7-7-0</td>
+                        <td class="stat-num">6-6-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Chicago Blackhawks</td>
+                        <td>ChiHawks</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">12</td>
+                        <td class="stat-num">14</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>26</strong></td>
+                        <td class="stat-num">70</td>
+                        <td class="stat-num">95</td>
+                        <td class="stat-num">2.50</td>
+                        <td class="stat-num">4-6-0</td>
+                        <td class="stat-num">7-7-0</td>
+                        <td class="stat-num">5-7-2</td>
+                    </tr>
+                    <!-- Playoff cutoff line -->
+                    <tr class="playoff-row">
+                        <td><div class="team-logo"></div></td>
+                        <td>Philadelphia Flyers</td>
+                        <td>BroadSt</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">10</td>
+                        <td class="stat-num">16</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>22</strong></td>
+                        <td class="stat-num">63</td>
+                        <td class="stat-num">102</td>
+                        <td class="stat-num">2.25</td>
+                        <td class="stat-num">3-7-0</td>
+                        <td class="stat-num">6-8-0</td>
+                        <td class="stat-num">4-8-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Buffalo Sabres</td>
+                        <td>BufSab</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">8</td>
+                        <td class="stat-num">18</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>18</strong></td>
+                        <td class="stat-num">55</td>
+                        <td class="stat-num">110</td>
+                        <td class="stat-num">1.96</td>
+                        <td class="stat-num">2-8-0</td>
+                        <td class="stat-num">5-9-0</td>
+                        <td class="stat-num">3-9-2</td>
+                    </tr>
+                    <tr>
+                        <td><div class="team-logo"></div></td>
+                        <td>Ottawa Senators</td>
+                        <td>CapCity</td>
+                        <td class="stat-num">28</td>
+                        <td class="stat-num">6</td>
+                        <td class="stat-num">20</td>
+                        <td class="stat-num">2</td>
+                        <td class="stat-num"><strong>14</strong></td>
+                        <td class="stat-num">48</td>
+                        <td class="stat-num">118</td>
+                        <td class="stat-num">1.71</td>
+                        <td class="stat-num">2-8-0</td>
+                        <td class="stat-num">4-10-0</td>
+                        <td class="stat-num">2-10-2</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <div class="footer-logo">NHL<br>'94</div>
+            <div class="footer-col">
+                <a href="#">Leagues</a>
+                <a href="#">Downloads</a>
+                <a href="#">Getting Started</a>
+            </div>
+            <div class="footer-col">
+                <a href="#">Contact</a>
+                <a href="#">Rules &amp; Policies</a>
+                <a href="#">FAQ</a>
+            </div>
+            <div class="footer-socials">
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.078.11 18.1.128 18.11a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- SCHEDULE PAGE -->
+<div class="page" id="page-schedule">
+    <div class="league-page">
+
+        <div class="filter-bar">
+            <div class="select-wrapper">
+                <select>
+                    <option selected>Pro League Season 4</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select>
+                    <option selected>East Division</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select>
+                    <option selected>GriffeyJr</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab" onclick="setTab(this)">Standings</div>
+            <div class="tab active" onclick="setTab(this)">Schedule</div>
+            <div class="tab" onclick="setTab(this)">Playoffs</div>
+        </div>
+
+        <div class="coach-card">
+            <div class="coach-logo">🏒</div>
+            <div class="coach-info">
+                <div class="coach-name">GriffeyJr</div>
+                <div class="coach-division">East Division</div>
+                <div class="coach-record">21-5-2</div>
+            </div>
+            <div class="coach-stats">
+                <div class="stat-box">
+                    <div class="stat-label">GP</div>
+                    <div class="stat-value">28</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">PTS</div>
+                    <div class="stat-value">44</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">GF</div>
+                    <div class="stat-value">112</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">GA</div>
+                    <div class="stat-value">64</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">GF/G</div>
+                    <div class="stat-value">4.00</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">GA/G</div>
+                    <div class="stat-value">2.29</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Home</div>
+                    <div class="stat-value">12-2</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Away</div>
+                    <div class="stat-value">9-3</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Home</th>
+                        <th></th>
+                        <th>Away</th>
+                        <th>Score</th>
+                        <th>Timestamp</th>
+                        <th>Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>GriffeyJr</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>Evan</td>
+                        <td class="stat-num">4-2</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/8/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                    <tr>
+                        <td>IceDog87</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>GriffeyJr</td>
+                        <td class="stat-num">1-5</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/7/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                    <tr>
+                        <td>GriffeyJr</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>BlkBear</td>
+                        <td class="stat-num">3-1</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/6/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                    <tr>
+                        <td>Habs4Ever</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>GriffeyJr</td>
+                        <td class="stat-num">2-6</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/5/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                    <tr>
+                        <td>GriffeyJr</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>Mapleleaf</td>
+                        <td class="stat-num">5-2</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/4/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                    <tr>
+                        <td>NYRfan</td>
+                        <td style="color:var(--text-muted)">at</td>
+                        <td>GriffeyJr</td>
+                        <td class="stat-num">1-4</td>
+                        <td style="color:var(--text-secondary)">6:04:14 PM · 4/3/26</td>
+                        <td><button class="btn-upload">Upload</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <div class="footer-logo">NHL<br>'94</div>
+            <div class="footer-col">
+                <a href="#">Leagues</a>
+                <a href="#">Downloads</a>
+                <a href="#">Getting Started</a>
+            </div>
+            <div class="footer-col">
+                <a href="#">Contact</a>
+                <a href="#">Rules &amp; Policies</a>
+                <a href="#">FAQ</a>
+            </div>
+            <div class="footer-socials">
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+                <svg class="footer-social-icon" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.261 5.632 5.905-5.632zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+            </div>
+        </footer>
+    </div>
+</div>
+
+<!-- Demo navigation -->
+<div class="demo-tabs">
+    <button class="demo-tab active" onclick="showPage('home', this)">Home</button>
+    <button class="demo-tab" onclick="showPage('standings', this)">Standings</button>
+    <button class="demo-tab" onclick="showPage('schedule', this)">Schedule</button>
+</div>
+
+<script>
+    function setMode(mode) {
+        document.body.classList.toggle('light', mode === 'light');
+        document.getElementById('btn-dark').classList.toggle('active', mode === 'dark');
+        document.getElementById('btn-light').classList.toggle('active', mode === 'light');
+    }
+
+    function showPage(name, btn) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById('page-' + name).classList.add('active');
+        document.querySelectorAll('.demo-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    function setTab(el) {
+        el.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        el.classList.add('active');
+    }
+</script>
+</body>
+</html>

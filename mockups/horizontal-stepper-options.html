@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horizontal Stepper Options — NHL94 Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Roboto', sans-serif;
+    background: #EEF2F7;
+    color: #0D1B2A;
+    padding: 40px 24px 80px;
+  }
+
+  /* ─── Page chrome ─── */
+  .page-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #4A6FA5;
+    margin-bottom: 6px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0D1B2A;
+    margin-bottom: 4px;
+  }
+  .section-sub {
+    font-size: 13px;
+    color: #4A6FA5;
+    margin-bottom: 40px;
+  }
+
+  .option-block {
+    margin-bottom: 64px;
+  }
+  .option-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: #4A6FA5;
+    margin-bottom: 12px;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #DDE4EE;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(13,27,42,.06);
+  }
+  .card-body {
+    padding: 32px;
+  }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-top: 1px solid #EEF2F7;
+    background: #F8FAFC;
+  }
+  .card-footer-right { display: flex; gap: 10px; }
+
+  .btn {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-primary { background: #1D4ED8; color: #fff; }
+  .btn-secondary { background: #fff; color: #0D1B2A; border: 1px solid #CBD5E1; }
+  .step-counter { font-size: 13px; color: #4A6FA5; }
+
+  .mock-content {
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mock-content-inner {
+    text-align: center;
+  }
+  .mock-content-inner strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0D1B2A;
+    margin-bottom: 4px;
+  }
+  .mock-content-inner span {
+    font-size: 13px;
+    color: #4A6FA5;
+  }
+
+  .separator {
+    height: 1px;
+    background: #CBD5E1;
+    margin: 48px 0;
+    opacity: .4;
+  }
+
+  /* ═══════════════════════════════════════════
+     OPTION A — Classic Connected Dots
+  ═══════════════════════════════════════════ */
+  .stepper-a {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 24px 32px 0;
+  }
+  .stepper-a-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+  }
+  .stepper-a-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 15px;
+    left: calc(50% + 15px);
+    right: calc(-50% + 15px);
+    height: 2px;
+    background: #CBD5E1;
+  }
+  .stepper-a-step.done:not(:last-child)::after {
+    background: #1D4ED8;
+  }
+  .stepper-a-dot {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    transition: all .2s;
+  }
+  .stepper-a-step.done .stepper-a-dot {
+    background: #1D4ED8;
+    color: #fff;
+  }
+  .stepper-a-step.active .stepper-a-dot {
+    background: #1D4ED8;
+    color: #fff;
+    box-shadow: 0 0 0 4px #DBEAFE;
+  }
+  .stepper-a-step.future .stepper-a-dot {
+    background: #fff;
+    color: #94A3B8;
+    border: 2px solid #CBD5E1;
+  }
+  .stepper-a-label {
+    margin-top: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.3;
+    max-width: 72px;
+  }
+  .stepper-a-step.done .stepper-a-label { color: #1D4ED8; }
+  .stepper-a-step.active .stepper-a-label { color: #0D1B2A; }
+  .stepper-a-step.future .stepper-a-label { color: #94A3B8; }
+
+  /* checkmark svg */
+  .check-icon { width: 14px; height: 14px; }
+
+  /* ═══════════════════════════════════════════
+     OPTION B — Pill/Pill-bar style
+  ═══════════════════════════════════════════ */
+  .stepper-b {
+    display: flex;
+    gap: 4px;
+    padding: 20px 32px 0;
+  }
+  .stepper-b-step {
+    flex: 1;
+    position: relative;
+  }
+  .stepper-b-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1.5px solid transparent;
+    transition: all .15s;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .stepper-b-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .stepper-b-label {
+    font-size: 12px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stepper-b-step.done .stepper-b-inner {
+    background: #EFF6FF;
+    border-color: #BFDBFE;
+  }
+  .stepper-b-step.done .stepper-b-num {
+    background: #1D4ED8;
+    color: #fff;
+  }
+  .stepper-b-step.done .stepper-b-label { color: #1D4ED8; }
+
+  .stepper-b-step.active .stepper-b-inner {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+    box-shadow: 0 2px 8px rgba(29,78,216,.3);
+  }
+  .stepper-b-step.active .stepper-b-num {
+    background: rgba(255,255,255,.25);
+    color: #fff;
+  }
+  .stepper-b-step.active .stepper-b-label { color: #fff; }
+
+  .stepper-b-step.future .stepper-b-inner {
+    background: #F8FAFC;
+    border-color: #E2E8F2;
+  }
+  .stepper-b-step.future .stepper-b-num {
+    background: #E2E8F2;
+    color: #94A3B8;
+  }
+  .stepper-b-step.future .stepper-b-label { color: #94A3B8; }
+
+  /* connector arrow */
+  .stepper-b-step:not(:last-child)::after {
+    content: '›';
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #CBD5E1;
+    font-size: 18px;
+    font-weight: 300;
+    z-index: 2;
+    line-height: 1;
+  }
+
+  /* ═══════════════════════════════════════════
+     OPTION C — Underline Tab Rail
+  ═══════════════════════════════════════════ */
+  .stepper-c {
+    display: flex;
+    border-bottom: 2px solid #E2E8F2;
+    padding: 0 32px;
+  }
+  .stepper-c-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 20px 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: default;
+    user-select: none;
+    position: relative;
+  }
+  .stepper-c-num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .stepper-c-label {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .stepper-c-step.done .stepper-c-num {
+    background: #1D4ED8;
+    color: #fff;
+  }
+  .stepper-c-step.done .stepper-c-label { color: #1D4ED8; }
+
+  .stepper-c-step.active {
+    border-bottom-color: #1D4ED8;
+  }
+  .stepper-c-step.active .stepper-c-num {
+    background: #1D4ED8;
+    color: #fff;
+  }
+  .stepper-c-step.active .stepper-c-label { color: #0D1B2A; }
+
+  .stepper-c-step.future .stepper-c-num {
+    background: #E2E8F2;
+    color: #94A3B8;
+  }
+  .stepper-c-step.future .stepper-c-label { color: #94A3B8; }
+
+  /* ═══════════════════════════════════════════
+     OPTION D — Segmented Progress Bar
+  ═══════════════════════════════════════════ */
+  .stepper-d {
+    padding: 20px 32px 0;
+  }
+  .stepper-d-labels {
+    display: flex;
+    margin-bottom: 10px;
+  }
+  .stepper-d-label-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .stepper-d-label-num {
+    font-size: 11px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .stepper-d-label-text {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .stepper-d-label-item.done .stepper-d-label-num { background: #1D4ED8; color: #fff; }
+  .stepper-d-label-item.done .stepper-d-label-text { color: #1D4ED8; }
+  .stepper-d-label-item.active .stepper-d-label-num { background: #1D4ED8; color: #fff; }
+  .stepper-d-label-item.active .stepper-d-label-text { color: #0D1B2A; font-weight: 700; }
+  .stepper-d-label-item.future .stepper-d-label-num { background: #E2E8F2; color: #94A3B8; }
+  .stepper-d-label-item.future .stepper-d-label-text { color: #94A3B8; }
+
+  .stepper-d-bar {
+    display: flex;
+    gap: 3px;
+  }
+  .stepper-d-seg {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+  }
+  .stepper-d-seg.done { background: #1D4ED8; }
+  .stepper-d-seg.active { background: #1D4ED8; opacity: .4; }
+  .stepper-d-seg.future { background: #E2E8F2; }
+
+  /* ─── responsive variant notes ─── */
+  .note {
+    font-size: 12px;
+    color: #4A6FA5;
+    margin-top: 8px;
+    font-style: italic;
+    padding: 0 32px;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">NHL94 Admin — Design Exploration</div>
+<div class="section-title">Horizontal Stepper Options</div>
+<div class="section-sub">4 layout options × 2 flows (League Setup · Playoff Setup) — step 2 of each shown as active state</div>
+
+
+<!-- ═══════════════════════════════════════════
+     OPTION A
+═══════════════════════════════════════════ -->
+<div class="option-block">
+  <div class="option-label">Option A — Classic Numbered Dots + Connector Line</div>
+
+  <!-- League Setup -->
+  <div class="card">
+    <div class="stepper-a">
+      <div class="stepper-a-step done">
+        <div class="stepper-a-dot">
+          <svg class="check-icon" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="stepper-a-label">Upload Roster</div>
+      </div>
+      <div class="stepper-a-step active">
+        <div class="stepper-a-dot">2</div>
+        <div class="stepper-a-label">Conferences</div>
+      </div>
+      <div class="stepper-a-step future">
+        <div class="stepper-a-dot">3</div>
+        <div class="stepper-a-label">Assign Users</div>
+      </div>
+      <div class="stepper-a-step future">
+        <div class="stepper-a-dot">4</div>
+        <div class="stepper-a-label">Assign Teams</div>
+      </div>
+      <div class="stepper-a-step future">
+        <div class="stepper-a-dot">5</div>
+        <div class="stepper-a-label">Divisions</div>
+      </div>
+      <div class="stepper-a-step future">
+        <div class="stepper-a-dot">6</div>
+        <div class="stepper-a-label">Schedule</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Conferences</strong>
+          <span>Name each group of players in your league.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 6</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playoff Setup -->
+  <div class="card">
+    <div class="stepper-a">
+      <div class="stepper-a-step done">
+        <div class="stepper-a-dot">
+          <svg class="check-icon" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="stepper-a-label">Overview</div>
+      </div>
+      <div class="stepper-a-step active">
+        <div class="stepper-a-dot">2</div>
+        <div class="stepper-a-label">Seeding</div>
+      </div>
+      <div class="stepper-a-step future">
+        <div class="stepper-a-dot">3</div>
+        <div class="stepper-a-label">Bracket Setup</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Seeding</strong>
+          <span>Review standings and set the playoff seeding order.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 3</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+  <div class="note">Clean, universally understood. Connecting line makes progress obvious. Compact dots work well for 6+ steps.</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     OPTION B
+═══════════════════════════════════════════ -->
+<div class="option-block">
+  <div class="option-label">Option B — Pill Steps with Chevron Dividers</div>
+
+  <!-- League Setup -->
+  <div class="card">
+    <div style="padding: 20px 32px 0; overflow-x: auto;">
+      <div class="stepper-b" style="min-width: 620px;">
+        <div class="stepper-b-step done">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="stepper-b-label">Upload Roster</div>
+          </div>
+        </div>
+        <div class="stepper-b-step active">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">2</div>
+            <div class="stepper-b-label">Conferences</div>
+          </div>
+        </div>
+        <div class="stepper-b-step future">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">3</div>
+            <div class="stepper-b-label">Assign Users</div>
+          </div>
+        </div>
+        <div class="stepper-b-step future">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">4</div>
+            <div class="stepper-b-label">Assign Teams</div>
+          </div>
+        </div>
+        <div class="stepper-b-step future">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">5</div>
+            <div class="stepper-b-label">Divisions</div>
+          </div>
+        </div>
+        <div class="stepper-b-step future" style="flex: 1">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">6</div>
+            <div class="stepper-b-label">Schedule</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Conferences</strong>
+          <span>Name each group of players in your league.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 6</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playoff Setup -->
+  <div class="card">
+    <div style="padding: 20px 32px 0;">
+      <div class="stepper-b">
+        <div class="stepper-b-step done">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="stepper-b-label">Overview</div>
+          </div>
+        </div>
+        <div class="stepper-b-step active">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">2</div>
+            <div class="stepper-b-label">Seeding</div>
+          </div>
+        </div>
+        <div class="stepper-b-step future">
+          <div class="stepper-b-inner">
+            <div class="stepper-b-num">3</div>
+            <div class="stepper-b-label">Bracket Setup</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Seeding</strong>
+          <span>Review standings and set the playoff seeding order.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 3</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+  <div class="note">More spatial than dots — active step is visually dominant. Needs horizontal scroll on small screens (or label truncation).</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     OPTION C
+═══════════════════════════════════════════ -->
+<div class="option-block">
+  <div class="option-label">Option C — Underline Tab Rail (no connector)</div>
+
+  <!-- League Setup -->
+  <div class="card">
+    <div class="stepper-c" style="overflow-x: auto;">
+      <div class="stepper-c-step done">
+        <div class="stepper-c-num">
+          <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="stepper-c-label">Upload Roster</div>
+      </div>
+      <div class="stepper-c-step active">
+        <div class="stepper-c-num">2</div>
+        <div class="stepper-c-label">Conferences</div>
+      </div>
+      <div class="stepper-c-step future">
+        <div class="stepper-c-num">3</div>
+        <div class="stepper-c-label">Assign Users</div>
+      </div>
+      <div class="stepper-c-step future">
+        <div class="stepper-c-num">4</div>
+        <div class="stepper-c-label">Assign Teams</div>
+      </div>
+      <div class="stepper-c-step future">
+        <div class="stepper-c-num">5</div>
+        <div class="stepper-c-label">Divisions</div>
+      </div>
+      <div class="stepper-c-step future">
+        <div class="stepper-c-num">6</div>
+        <div class="stepper-c-label">Schedule</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Conferences</strong>
+          <span>Name each group of players in your league.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 6</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playoff Setup -->
+  <div class="card">
+    <div class="stepper-c">
+      <div class="stepper-c-step done">
+        <div class="stepper-c-num">
+          <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="stepper-c-label">Overview</div>
+      </div>
+      <div class="stepper-c-step active">
+        <div class="stepper-c-num">2</div>
+        <div class="stepper-c-label">Seeding</div>
+      </div>
+      <div class="stepper-c-step future">
+        <div class="stepper-c-num">3</div>
+        <div class="stepper-c-label">Bracket Setup</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Seeding</strong>
+          <span>Review standings and set the playoff seeding order.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 3</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+  <div class="note">Lightest visual footprint — feels like a tab bar. Active underline is a strong spatial anchor. Great for 3-step flows; gets tight at 6 steps.</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     OPTION D
+═══════════════════════════════════════════ -->
+<div class="option-block">
+  <div class="option-label">Option D — Segmented Progress Bar with Labels Above</div>
+
+  <!-- League Setup -->
+  <div class="card">
+    <div class="stepper-d">
+      <div class="stepper-d-labels">
+        <div class="stepper-d-label-item done" style="flex:1">
+          <div class="stepper-d-label-num">
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stepper-d-label-text">Upload Roster</div>
+        </div>
+        <div class="stepper-d-label-item active" style="flex:1">
+          <div class="stepper-d-label-num">2</div>
+          <div class="stepper-d-label-text">Conferences</div>
+        </div>
+        <div class="stepper-d-label-item future" style="flex:1">
+          <div class="stepper-d-label-num">3</div>
+          <div class="stepper-d-label-text">Assign Users</div>
+        </div>
+        <div class="stepper-d-label-item future" style="flex:1">
+          <div class="stepper-d-label-num">4</div>
+          <div class="stepper-d-label-text">Assign Teams</div>
+        </div>
+        <div class="stepper-d-label-item future" style="flex:1">
+          <div class="stepper-d-label-num">5</div>
+          <div class="stepper-d-label-text">Divisions</div>
+        </div>
+        <div class="stepper-d-label-item future" style="flex:1">
+          <div class="stepper-d-label-num">6</div>
+          <div class="stepper-d-label-text">Schedule</div>
+        </div>
+      </div>
+      <div class="stepper-d-bar">
+        <div class="stepper-d-seg done"></div>
+        <div class="stepper-d-seg active"></div>
+        <div class="stepper-d-seg future"></div>
+        <div class="stepper-d-seg future"></div>
+        <div class="stepper-d-seg future"></div>
+        <div class="stepper-d-seg future"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Conferences</strong>
+          <span>Name each group of players in your league.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 6</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playoff Setup -->
+  <div class="card">
+    <div class="stepper-d">
+      <div class="stepper-d-labels">
+        <div class="stepper-d-label-item done" style="flex:1">
+          <div class="stepper-d-label-num">
+            <svg width="9" height="9" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="stepper-d-label-text">Overview</div>
+        </div>
+        <div class="stepper-d-label-item active" style="flex:1">
+          <div class="stepper-d-label-num">2</div>
+          <div class="stepper-d-label-text">Seeding</div>
+        </div>
+        <div class="stepper-d-label-item future" style="flex:1">
+          <div class="stepper-d-label-num">3</div>
+          <div class="stepper-d-label-text">Bracket Setup</div>
+        </div>
+      </div>
+      <div class="stepper-d-bar">
+        <div class="stepper-d-seg done"></div>
+        <div class="stepper-d-seg active"></div>
+        <div class="stepper-d-seg future"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="mock-content">
+        <div class="mock-content-inner">
+          <strong>Seeding</strong>
+          <span>Review standings and set the playoff seeding order.</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <div class="step-counter">Step 2 of 3</div>
+      <div class="card-footer-right">
+        <button class="btn btn-secondary">Back</button>
+        <button class="btn btn-primary">Next</button>
+      </div>
+    </div>
+  </div>
+  <div class="note">Most compact vertically. The progress bar gives a strong sense of how far along you are. Labels can truncate gracefully on narrow viewports.</div>
+</div>
+
+</body>
+</html>

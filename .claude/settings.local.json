@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "WebSearch",
+      "TodoWrite",
+      "Skill",
+      "Agent",
+      "mcp__figma-desktop__create_design_system_rules",
+      "mcp__figma-desktop__get_design_context",
+      "mcp__figma-desktop__get_figjam",
+      "mcp__figma-desktop__get_metadata",
+      "mcp__figma-desktop__get_screenshot",
+      "mcp__figma-desktop__get_variable_defs",
+      "mcp__figma__add_code_connect_map",
+      "mcp__figma__create_design_system_rules",
+      "mcp__figma__create_new_file",
+      "mcp__figma__generate_diagram",
+      "mcp__figma__generate_figma_design",
+      "mcp__figma__get_code_connect_map",
+      "mcp__figma__get_code_connect_suggestions",
+      "mcp__figma__get_context_for_code_connect",
+      "mcp__figma__get_design_context",
+      "mcp__figma__get_figjam",
+      "mcp__figma__get_metadata",
+      "mcp__figma__get_screenshot",
+      "mcp__figma__get_variable_defs",
+      "mcp__figma__search_design_system",
+      "mcp__figma__send_code_connect_mappings",
+      "mcp__figma__use_figma",
+      "mcp__figma__whoami"
+    ],
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "C:\\Users\\Grease",
+      "z:\\Claude\\Projects\\NHL94\\nhl94\\.claude",
+      "C:\\Users\\Grease\\.claude",
+      "C:\\Users\\Grease\\.claude\\commands"
+    ]
+  },
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": false
+  }
+}

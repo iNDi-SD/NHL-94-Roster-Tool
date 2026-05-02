@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>statExtract</class>
+ <widget class="QMainWindow" name="statExtract">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>508</width>
+    <height>351</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>NHL '94 Stat Extractor</string>
+  </property>
+  <property name="autoFillBackground">
+   <bool>false</bool>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <layout class="QHBoxLayout" name="titleLayout">
+      <item>
+       <widget class="QLabel" name="title">
+        <property name="font">
+         <font>
+          <family>NHL '94</family>
+          <pointsize>20</pointsize>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>NHL94 Offline Stat Extractor</string>
+        </property>
+        <property name="scaledContents">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="romLayout">
+      <item>
+       <spacer name="horizontalSpacer_7">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="romBtn">
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Choose ROM...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="romLabel">
+        <property name="text">
+         <string>No ROM Loaded.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_8">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="perLayout">
+      <item>
+       <spacer name="horizontalSpacer_3">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="perLabel">
+        <property name="text">
+         <string>Period Length (min):</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="perLength">
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>60</number>
+        </property>
+        <property name="value">
+         <number>5</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="tmLabel">
+        <property name="text">
+         <string># of Teams in ROM: </string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="numTeams">
+        <property name="maximum">
+         <number>32</number>
+        </property>
+        <property name="value">
+         <number>28</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="stateLayout">
+      <item>
+       <spacer name="horizontalSpacer_5">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="stateBtn">
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Choose State...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="stateLabel">
+        <property name="text">
+         <string>No State Loaded.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_6">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="stateTypeLayout">
+      <item>
+       <spacer name="horizontalSpacer_9">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>30</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="typeLabel">
+        <property name="text">
+         <string>State Type:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="typeGPGX">
+        <property name="text">
+         <string>RA-GPGX</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="typeSNES9x">
+        <property name="text">
+         <string>RA-Snes9x</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_10">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="extractLayout">
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="extBtn">
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Extract to XLS...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_2">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>508</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionLoad_ROM"/>
+    <addaction name="actionLoad_Save_State"/>
+    <addaction name="actionExtract_to_CSV"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+    <addaction name="actionInstructions"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionLoad_ROM">
+   <property name="text">
+    <string>Load ROM...</string>
+   </property>
+  </action>
+  <action name="actionLoad_Save_State">
+   <property name="text">
+    <string>Load Save State...</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionExtract_to_CSV">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Extract to XLS...</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About...</string>
+   </property>
+  </action>
+  <action name="actionInstructions">
+   <property name="text">
+    <string>Instructions...</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

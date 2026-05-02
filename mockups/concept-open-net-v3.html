@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL '94 Online — Open Net v3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;0,900;1,700;1,800;1,900&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ── RESET ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    a { text-decoration: none; color: inherit; }
+    button { border: none; cursor: pointer; background: none; font: inherit; color: inherit; }
+
+    /* ── DARK : Monochromatic (black/grey) + Blue content accent ── */
+    html.dark {
+      --bg:               #0A0A0A;
+      --surface:          #1A1A1A;
+      --surface-alt:      #242424;
+      --surface-hover:    #2E2E2E;
+      --border:           rgba(255,255,255,0.08);
+      --border-strong:    rgba(255,255,255,0.15);
+      --text-1:           #F0F0F0;
+      --text-2:           #8A8A8A;
+      --text-3:           #606060;
+      --accent:           #00C7F2;        /* content/interactive only */
+      --accent-dim:       rgba(0,199,242,0.12);
+      --accent-dim-hover: rgba(0,199,242,0.20);
+      --hot:              #FF4757;        /* loss/danger in content */
+      --hot-dim:          rgba(255,71,87,0.13);
+      --green:            #2ED573;        /* win in content */
+      --green-dim:        rgba(46,213,115,0.13);
+      --amber:            #FFB627;        /* highlight in content */
+      --ticker-bg:        #0F0F0F;
+      --ticker-text:      #606060;
+      --nav-bg:           rgba(15,15,15,0.95);
+      --shadow-card:      0 1px 0 rgba(255,255,255,0.05) inset, 0 4px 16px rgba(0,0,0,0.40);
+    }
+
+    /* ── LIGHT : White/grey + Navy content accent ── */
+    html.light {
+      --bg:               #F5F5F5;
+      --surface:          #FFFFFF;
+      --surface-alt:      #F8F8F8;
+      --surface-hover:    #F0F0F0;
+      --border:           rgba(0,0,0,0.10);
+      --border-strong:    rgba(0,0,0,0.18);
+      --text-1:           #1A1A1A;
+      --text-2:           #707070;
+      --text-3:           #A0A0A0;
+      --accent:           #0080B4;        /* content/interactive only */
+      --accent-dim:       rgba(0,128,180,0.10);
+      --accent-dim-hover: rgba(0,128,180,0.18);
+      --hot:              #D62828;
+      --hot-dim:          rgba(214,40,40,0.10);
+      --green:            #15803D;
+      --green-dim:        rgba(21,128,61,0.10);
+      --amber:            #D48800;
+      --ticker-bg:        #1A1A1A;
+      --ticker-text:      #707070;
+      --nav-bg:           rgba(255,255,255,0.98);
+      --shadow-card:      0 1px 0 rgba(255,255,255,0.8) inset, 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    :root {
+      --ticker-h: 32px;
+      --nav-h: 60px;
+      --t: 180ms ease;
+    }
+
+    html { font-size: 16px; }
+    body {
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* ── TICKER ── */
+    .ticker {
+      height: var(--ticker-h);
+      background: var(--ticker-bg);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+    .ticker-label {
+      flex-shrink: 0;
+      padding: 0 14px;
+      height: 100%;
+      display: flex; align-items: center; gap: 6px;
+      border-right: 1px solid var(--border);
+    }
+    .ticker-label-dot {
+      width: 6px; height: 6px;
+      background: var(--hot);
+      animation: blink 1.6s ease infinite;
+    }
+    .ticker-label-text {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 800;
+      font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--accent);
+    }
+    .ticker-scroller { flex: 1; overflow: hidden; }
+    .ticker-track {
+      display: flex;
+      animation: scroll-left 60s linear infinite;
+      width: max-content;
+    }
+    .ticker-scroller:hover .ticker-track { animation-play-state: paused; }
+    .ticker-item {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 0 18px;
+      border-right: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--ticker-text);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .ticker-item:hover { background: var(--surface-hover); }
+    .ti-league {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--accent);
+      padding-right: 8px;
+      border-right: 1px solid var(--border);
+    }
+    .ti-coach { color: var(--text-1); font-weight: 600; font-size: 11px; font-family: 'Inter',sans-serif; }
+    .ti-team {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em; color: var(--text-3);
+      padding: 0 4px;
+    }
+    .ti-score {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-style: italic;
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--text-1);
+      letter-spacing: 0.02em;
+    }
+    .ti-win   { color: var(--accent) !important; }
+    .ti-sep   { opacity: 0.4; font-family: 'Roboto Mono', monospace; }
+    .ti-type  {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+      padding: 1px 5px;
+      background: var(--surface-alt); color: var(--text-3);
+      text-transform: uppercase;
+    }
+    .ti-type.ot { background: var(--amber-dim); color: var(--amber); }
+
+    @keyframes scroll-left {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.25; }
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ── NAV ── */
+    .nav {
+      height: var(--nav-h);
+      background: var(--nav-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center;
+      padding: 0 28px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; margin-right: 28px;
+    }
+    .nav-mark {
+      width: 36px; height: 36px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-style: italic;
+      font-size: 17px; font-weight: 900;
+      color: #FFFFFF; letter-spacing: -0.04em;
+    }
+    html.light .nav-mark { color: #FFFFFF; }
+    .nav-wordmark {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 22px; font-weight: 800;
+      font-style: italic;
+      letter-spacing: 0.02em; line-height: 1;
+      color: var(--text-1);
+    }
+    .nav-wordmark em { font-style: italic; color: var(--accent); }
+    .nav-links {
+      display: flex; align-items: center; gap: 0;
+      flex: 1;
+    }
+    .nav-link {
+      padding: 8px 14px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--text-2);
+      position: relative;
+      transition: color var(--t);
+    }
+    .nav-link:hover { color: var(--text-1); }
+    .nav-link.on { color: var(--accent); }
+    /* pixel-block active indicator */
+    .nav-link.on::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 50%;
+      transform: translateX(-50%);
+      width: 18px; height: 3px;
+      background:
+        linear-gradient(90deg,
+          var(--accent) 0 3px,
+          transparent 3px 6px,
+          var(--accent) 6px 9px,
+          transparent 9px 12px,
+          var(--accent) 12px 18px);
+    }
+    .nav-end { display: flex; align-items: center; gap: 12px; }
+    .nav-search {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      transition: all var(--t);
+    }
+    .nav-search:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .nav-avatar {
+      width: 34px; height: 34px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 900; font-style: italic;
+      color: #FFFFFF; cursor: pointer;
+    }
+
+    /* ── PAGE ── */
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 28px 24px 80px;
+    }
+
+    .concept-note {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; margin-bottom: 26px;
+      background: var(--surface-alt);
+      border-left: 3px solid var(--accent);
+      border-radius: 2px;
+    }
+    .concept-note-badge {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 800; font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+    .concept-note-text { font-size: 12px; color: var(--text-2); }
+    .concept-note-text strong { color: var(--text-1); }
+
+    /* ── LEAGUE HERO ── */
+    .league-hero {
+      margin-bottom: 24px;
+    }
+    .league-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 800; font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .league-eyebrow::before {
+      content: '';
+      width: 16px; height: 2px;
+      background: var(--accent);
+    }
+    .league-name {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 44px; font-weight: 800;
+      font-style: italic;
+      letter-spacing: 0.005em; line-height: 0.95;
+      color: var(--text-1);
+      text-transform: uppercase;
+    }
+    .league-name em {
+      font-style: italic;
+      color: var(--accent);
+    }
+    .league-chips {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 13px; flex-wrap: wrap;
+    }
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 10px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.07em;
+      background: var(--surface-alt);
+      color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+    .chip-live {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: var(--green-dim);
+    }
+    .chip-live::before {
+      content: ''; width: 6px; height: 6px;
+      background: var(--green); animation: blink 1.6s ease infinite;
+    }
+    .chip-conf {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex; align-items: stretch; gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+      margin-bottom: 22px;
+    }
+    .filter-cell {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      border-right: 1px solid var(--border);
+      flex: 1;
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .filter-cell:last-child { border-right: none; }
+    .filter-cell:hover { background: var(--surface-hover); }
+    .filter-label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 800; font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--text-3);
+      flex-shrink: 0;
+      width: 56px;
+    }
+    .filter-value {
+      font-size: 14px; font-weight: 600;
+      color: var(--text-1);
+      flex: 1;
+    }
+    .filter-value-sub {
+      font-size: 11px; color: var(--text-3);
+      margin-left: 6px; font-weight: 400;
+    }
+    .filter-chev {
+      color: var(--text-3); margin-left: auto;
+    }
+    .filter-cell.search .filter-value {
+      color: var(--text-3);
+      font-style: italic;
+    }
+
+    /* ── TABS ── */
+    .tabs {
+      display: flex; align-items: center;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+    .tab {
+      padding: 10px 20px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-2);
+      position: relative;
+      margin-bottom: -1px;
+      transition: color var(--t);
+    }
+    .tab:hover { color: var(--text-1); }
+    .tab.on    { color: var(--accent); }
+    .tab.on::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 28px; height: 2px;
+      background:
+        linear-gradient(90deg,
+          var(--accent) 0 3px,
+          transparent 3px 6px,
+          var(--accent) 6px 9px,
+          transparent 9px 12px,
+          var(--accent) 12px 28px);
+    }
+
+    /* ── SECTION HEAD ── */
+    .s-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 10px;
+    }
+    .s-title {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 13px; font-weight: 800; font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--text-2);
+    }
+    .s-title-rule {
+      flex: 1; height: 1px;
+      background: var(--border);
+    }
+    .s-title-num {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 700;
+      color: var(--text-3);
+    }
+
+    /* ── STANDINGS ── */
+    .standings-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+      overflow: hidden;
+    }
+
+    table.standings {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table.standings thead {
+      background: var(--surface-alt);
+      border-bottom: 1px solid var(--border);
+    }
+    table.standings th {
+      padding: 12px 12px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 11px; font-weight: 800; font-style: italic;
+      text-transform: uppercase; letter-spacing: 0.11em;
+      color: var(--text-3);
+      text-align: right; white-space: nowrap;
+    }
+    table.standings th:first-child { width: 38px; text-align: center; padding-left: 18px; }
+    table.standings th.c-player { text-align: left; padding-left: 10px; }
+    table.standings th.c-streak { text-align: center; }
+
+    table.standings td {
+      padding: 0 12px; height: 54px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 13px; font-weight: 500;
+      color: var(--text-2);
+      text-align: right; white-space: nowrap;
+      vertical-align: middle;
+    }
+    table.standings tr:last-child td { border-bottom: none; }
+    table.standings tbody tr {
+      transition: background var(--t);
+      cursor: pointer;
+    }
+    table.standings tbody tr:hover { background: var(--surface-hover); }
+
+    table.standings td.c-rank {
+      text-align: center; padding-left: 18px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 16px; font-weight: 800; font-style: italic;
+      color: var(--text-3);
+    }
+
+    table.standings td.c-player {
+      text-align: left; padding-left: 10px;
+      font-family: 'Inter', sans-serif;
+      width: 230px;
+    }
+    .pcell { display: flex; align-items: center; gap: 11px; }
+    .pav {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-style: italic;
+      font-size: 13px; font-weight: 800;
+      color: #FFFFFF; flex-shrink: 0;
+      letter-spacing: -0.01em;
+    }
+    .pinfo { display: flex; flex-direction: column; gap: 2px; line-height: 1.15; }
+    .pname {
+      font-size: 13px; font-weight: 600;
+      color: var(--text-1); font-family: 'Inter', sans-serif;
+    }
+    .pteam {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--text-3);
+      text-transform: uppercase;
+    }
+    .pteam .dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      vertical-align: 1px;
+      margin-right: 5px;
+    }
+
+    table.standings td.c-pts {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-style: italic;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-1);
+      letter-spacing: 0.01em;
+    }
+    table.standings td.c-pts span {
+      display: inline-block;
+      position: relative;
+    }
+    table.standings td.c-pts span::after {
+      content: attr(data-val);
+      position: absolute;
+      left: 1px; top: 1px;
+      color: var(--accent);
+      opacity: 0.40;
+      z-index: -1;
+    }
+
+    .pos { color: var(--green); font-weight: 600; }
+    .neg { color: var(--hot); font-weight: 600; }
+
+    table.standings td.c-streak { text-align: center; }
+    .stk {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 800;
+      letter-spacing: 0.05em;
+    }
+    .stk-w { background: var(--green-dim); color: var(--green); }
+    .stk-l { background: var(--hot-dim);   color: var(--hot);   }
+
+    .cut-row td {
+      padding: 0 !important; height: 0 !important;
+      border: none !important;
+    }
+    .cut-row .cut-bar {
+      height: 26px;
+      background: var(--surface-alt);
+      display: flex; align-items: center;
+      padding: 0 18px;
+      border-top: 2px dashed var(--border-strong);
+      border-bottom: 1px solid var(--border);
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 10px; font-weight: 800; font-style: italic;
+      letter-spacing: 0.14em;
+      color: var(--text-3);
+      text-transform: uppercase;
+      gap: 9px;
+    }
+    .cut-row .cut-bar::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--text-3);
+      transform: rotate(45deg);
+    }
+
+    /* ── FOOTER ── */
+    .footer-strip {
+      border-top: 1px solid var(--border);
+      padding: 28px 24px;
+      margin-top: 56px;
+    }
+    .footer-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px;
+    }
+    .footer-brand {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 17px; font-weight: 800; font-style: italic;
+      color: var(--text-2); letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .footer-brand em { font-style: italic; color: var(--accent); }
+    .footer-links { display: flex; gap: 22px; }
+    .footer-link {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--text-3);
+      transition: color var(--t);
+    }
+    .footer-link:hover { color: var(--accent); }
+
+    /* ── FAB ── */
+    .fab {
+      position: fixed; bottom: 22px; right: 22px;
+      width: 46px; height: 46px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-card);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      cursor: pointer;
+      z-index: 200;
+      transition: all var(--t);
+    }
+    .fab:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+
+<div class="ticker">
+  <div class="ticker-label">
+    <div class="ticker-label-dot"></div>
+    <span class="ticker-label-text">Latest</span>
+  </div>
+  <div class="ticker-scroller">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+</div>
+
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <div class="nav-mark">94</div>
+    <div class="nav-wordmark">NHL <em>'94</em> Online</div>
+  </a>
+  <div class="nav-links">
+    <a href="#" class="nav-link">Home</a>
+    <a href="#" class="nav-link on">Leagues</a>
+    <a href="#" class="nav-link">Game Info</a>
+    <a href="#" class="nav-link">User Stats</a>
+  </div>
+  <div class="nav-end">
+    <button class="nav-search" title="Search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </button>
+    <div class="nav-avatar">G</div>
+  </div>
+</nav>
+
+<div class="page">
+
+  <div class="concept-note">
+    <span class="concept-note-badge">v3 · Monochromatic</span>
+    <span class="concept-note-text"><strong>No glows/gradients.</strong> Dark: black/grey surfaces, blue for content. Light: white/grey surfaces, blue for content.</span>
+  </div>
+
+  <div class="league-hero">
+    <div class="league-eyebrow">NHL '94 Online · 2026 Season</div>
+    <div class="league-name">NAHL <em>East Division</em></div>
+    <div class="league-chips">
+      <span class="chip chip-live">Live</span>
+      <span class="chip chip-conf">East Conference</span>
+      <span class="chip">Season 24</span>
+      <span class="chip">Ends May 15</span>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-cell">
+      <span class="filter-label">League</span>
+      <span class="filter-value">NAHL <span class="filter-value-sub">· North American Hockey League</span></span>
+      <svg class="filter-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="filter-cell">
+      <span class="filter-label">Conf</span>
+      <span class="filter-value">East <span class="filter-value-sub">· 10 coaches</span></span>
+      <svg class="filter-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="filter-cell search">
+      <span class="filter-label">Coach</span>
+      <span class="filter-value">Search by handle…</span>
+      <svg class="filter-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <a href="#" class="tab on">Standings</a>
+    <a href="#" class="tab">Schedule</a>
+    <a href="#" class="tab">Roster</a>
+    <a href="#" class="tab">Playoffs</a>
+  </div>
+
+  <div class="s-head">
+    <span class="s-title">Standings · East</span>
+    <div class="s-title-rule"></div>
+    <span class="s-title-num">10 Coaches · 312 GP</span>
+  </div>
+
+  <div class="standings-card">
+    <table class="standings">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th class="c-player">Coach</th>
+          <th>GP</th>
+          <th>W</th>
+          <th>L</th>
+          <th>T</th>
+          <th>PTS</th>
+          <th>GF</th>
+          <th>GA</th>
+          <th>DIFF</th>
+          <th class="c-streak">STK</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <tr>
+          <td class="c-rank">1</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#002654;">GT</div>
+              <div class="pinfo">
+                <span class="pname">GreaseTrap</span>
+                <span class="pteam"><span class="dot" style="background:#0040A0;"></span>TOR</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>19</td><td>3</td><td>2</td>
+          <td class="c-pts"><span data-val="40">40</span></td>
+          <td>142</td><td>87</td>
+          <td class="pos">+55</td>
+          <td class="c-streak"><span class="stk stk-w">W4</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">2</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#C8102E;">DW</div>
+              <div class="pinfo">
+                <span class="pname">DetroitWings99</span>
+                <span class="pteam"><span class="dot" style="background:#CC0000;"></span>DET</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>17</td><td>5</td><td>2</td>
+          <td class="c-pts"><span data-val="36">36</span></td>
+          <td>129</td><td>95</td>
+          <td class="pos">+34</td>
+          <td class="c-streak"><span class="stk stk-w">W2</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">3</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#AF1E2D;">HC</div>
+              <div class="pinfo">
+                <span class="pname">HabsChampion</span>
+                <span class="pteam"><span class="dot" style="background:#AF1E2D;"></span>MTL</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>16</td><td>6</td><td>2</td>
+          <td class="c-pts"><span data-val="34">34</span></td>
+          <td>118</td><td>99</td>
+          <td class="pos">+19</td>
+          <td class="c-streak"><span class="stk stk-l">L1</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">4</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#F47321;">BS</div>
+              <div class="pinfo">
+                <span class="pname">BroadStBully</span>
+                <span class="pteam"><span class="dot" style="background:#F47321;"></span>PHI</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>14</td><td>7</td><td>3</td>
+          <td class="c-pts"><span data-val="31">31</span></td>
+          <td>110</td><td>102</td>
+          <td class="pos">+8</td>
+          <td class="c-streak"><span class="stk stk-w">W1</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">5</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#00205B;">PH</div>
+              <div class="pinfo">
+                <span class="pname">PuckHandler</span>
+                <span class="pteam"><span class="dot" style="background:#FFB81C;"></span>BOS</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>12</td><td>9</td><td>3</td>
+          <td class="c-pts"><span data-val="27">27</span></td>
+          <td>105</td><td>108</td>
+          <td class="neg">-3</td>
+          <td class="c-streak"><span class="stk stk-l">L3</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">6</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#003087;">SJ</div>
+              <div class="pinfo">
+                <span class="pname">SlapshotJockey</span>
+                <span class="pteam"><span class="dot" style="background:#0033A0;"></span>NYR</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>11</td><td>10</td><td>3</td>
+          <td class="c-pts"><span data-val="25">25</span></td>
+          <td>99</td><td>111</td>
+          <td class="neg">-12</td>
+          <td class="c-streak"><span class="stk stk-w">W2</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">7</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#00843D;">IP</div>
+              <div class="pinfo">
+                <span class="pname">IcePickle</span>
+                <span class="pteam"><span class="dot" style="background:#00205B;"></span>VAN</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>10</td><td>11</td><td>3</td>
+          <td class="c-pts"><span data-val="23">23</span></td>
+          <td>95</td><td>114</td>
+          <td class="neg">-19</td>
+          <td class="c-streak"><span class="stk stk-l">L2</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">8</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#002F87;">FZ</div>
+              <div class="pinfo">
+                <span class="pname">FreezeFrame</span>
+                <span class="pteam"><span class="dot" style="background:#FCB514;"></span>STL</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>9</td><td>12</td><td>3</td>
+          <td class="c-pts"><span data-val="21">21</span></td>
+          <td>88</td><td>115</td>
+          <td class="neg">-27</td>
+          <td class="c-streak"><span class="stk stk-w">W1</span></td>
+        </tr>
+
+        <tr class="cut-row">
+          <td colspan="11">
+            <div class="cut-bar">Playoff Cutoff · Top 8 Qualify</div>
+          </td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">9</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#CF0A2C;">BK</div>
+              <div class="pinfo">
+                <span class="pname">BladeKing</span>
+                <span class="pteam"><span class="dot" style="background:#CF0A2C;"></span>CHI</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>7</td><td>14</td><td>3</td>
+          <td class="c-pts"><span data-val="17">17</span></td>
+          <td>80</td><td>122</td>
+          <td class="neg">-42</td>
+          <td class="c-streak"><span class="stk stk-l">L4</span></td>
+        </tr>
+
+        <tr>
+          <td class="c-rank">10</td>
+          <td class="c-player">
+            <div class="pcell">
+              <div class="pav" style="background:#002F6C;">NC</div>
+              <div class="pinfo">
+                <span class="pname">NightCrawler94</span>
+                <span class="pteam"><span class="dot" style="background:#001F5C;"></span>QUE</span>
+              </div>
+            </div>
+          </td>
+          <td>24</td><td>5</td><td>16</td><td>3</td>
+          <td class="c-pts"><span data-val="13">13</span></td>
+          <td>72</td><td>138</td>
+          <td class="neg">-66</td>
+          <td class="c-streak"><span class="stk stk-l">L2</span></td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="footer-strip">
+  <div class="footer-inner">
+    <div class="footer-brand">NHL <em>'94</em> Online</div>
+    <div class="footer-links">
+      <a href="#" class="footer-link">Leagues</a>
+      <a href="#" class="footer-link">Game Info</a>
+      <a href="#" class="footer-link">User Stats</a>
+      <a href="#" class="footer-link">Tools</a>
+    </div>
+  </div>
+</div>
+
+<button class="fab" id="themeFab" title="Toggle theme">☀️</button>
+
+<script>
+  const games = [
+    { lg:'NAHL', a:'GreaseTrap',     at:'TOR', as:7, b:'BladeKing',     bt:'CHI', bs:2, ot:false, id:'g1001' },
+    { lg:'NAHL', a:'DetroitWings99', at:'DET', as:5, b:'FreezeFrame',   bt:'STL', bs:4, ot:true,  id:'g1002' },
+    { lg:'WCHL', a:'PuckHandler',    at:'BOS', as:4, b:'HabsChampion',  bt:'MTL', bs:3, ot:false, id:'g1003' },
+    { lg:'NAHL', a:'SlapshotJockey', at:'NYR', as:6, b:'NightCrawler94',bt:'QUE', bs:1, ot:false, id:'g1004' },
+    { lg:'WCHL', a:'BroadStBully',   at:'PHI', as:3, b:'IcePickle',     bt:'VAN', bs:2, ot:true,  id:'g1005' },
+    { lg:'GOLD', a:'GreaseTrap',     at:'TOR', as:4, b:'PuckHandler',   bt:'BOS', bs:3, ot:false, id:'g1006' },
+    { lg:'NAHL', a:'DetroitWings99', at:'DET', as:6, b:'NightCrawler94',bt:'QUE', bs:0, ot:false, id:'g1007' },
+    { lg:'WCHL', a:'HabsChampion',   at:'MTL', as:5, b:'BladeKing',     bt:'CHI', bs:2, ot:false, id:'g1008' },
+    { lg:'GOLD', a:'IcePickle',      at:'VAN', as:3, b:'SlapshotJockey',bt:'NYR', bs:6, ot:false, id:'g1009' },
+    { lg:'NAHL', a:'FreezeFrame',    at:'STL', as:2, b:'BroadStBully',  bt:'PHI', bs:5, ot:false, id:'g1010' },
+  ];
+
+  const track = document.getElementById('tickerTrack');
+  [...games, ...games].forEach(g => {
+    const aWin = g.as > g.bs;
+    const type = g.ot ? `<span class="ti-type ot">OT</span>` : `<span class="ti-type">Final</span>`;
+    const item = document.createElement('div');
+    item.className = 'ticker-item';
+    item.title = `View boxscore: ${g.a} (${g.at}) ${g.as}–${g.bs} ${g.b} (${g.bt})`;
+    item.innerHTML = `
+      <span class="ti-league">${g.lg}</span>
+      <span class="ti-coach ${aWin?'ti-win':''}">${g.a}</span>
+      <span class="ti-team">${g.at}</span>
+      <span class="ti-score ${aWin?'ti-win':''}">${g.as}</span>
+      <span class="ti-sep">–</span>
+      <span class="ti-score ${!aWin?'ti-win':''}">${g.bs}</span>
+      <span class="ti-coach ${!aWin?'ti-win':''}">${g.b}</span>
+      <span class="ti-team">${g.bt}</span>
+      ${type}
+    `;
+    track.appendChild(item);
+  });
+
+  const fab = document.getElementById('themeFab');
+  fab.addEventListener('click', () => {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    fab.textContent = isDark ? '🌙' : '☀️';
+  });
+</script>
+</body>
+</html>

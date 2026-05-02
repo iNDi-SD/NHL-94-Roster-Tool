@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL '94 Roster Tool — GENS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Roboto', sans-serif; background: #060E19; color: #E2E8F0; min-height: 100vh; display: flex; flex-direction: column; }
+
+    header { background: #0D1B2A; border-bottom: 3px solid #EAB308; padding: 16px 28px; display: flex; align-items: center; gap: 14px; }
+    header h1 { font-size: 19px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; color: #F0F4F8; }
+    .hbadge { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #0D1B2A; background: #EAB308; padding: 3px 8px; border-radius: 3px; }
+    /* ── Team-count toggle ── */
+    .team-toggle { margin-left: auto; display: flex; background: #060E19; border-radius: 4px; padding: 2px; gap: 2px; }
+    .tt-btn { background: none; border: none; padding: 5px 11px; font: 700 10px/1 'Roboto', sans-serif; letter-spacing: .1em; text-transform: uppercase; color: #4A6FA5; cursor: pointer; border-radius: 3px; transition: background .12s, color .12s; }
+    .tt-btn.active { background: #1B3A5C; color: #F0F4F8; }
+    .tt-btn:hover:not(.active) { color: #CBD5E1; }
+
+    /* ── Tabs ── */
+    .tab-bar { background: #0D1B2A; border-bottom: 1px solid #1B3A5C; padding: 0 28px; display: flex; gap: 0; }
+    .tab-btn { background: none; border: none; border-bottom: 3px solid transparent; padding: 14px 22px 11px; font: 700 11px/1 'Roboto', sans-serif; letter-spacing: .12em; text-transform: uppercase; color: #4A6FA5; cursor: pointer; transition: color .15s, border-color .15s; margin-bottom: -1px; }
+    .tab-btn:hover { color: #CBD5E1; }
+    .tab-btn.active { color: #F0F4F8; border-bottom-color: #EAB308; }
+
+    /* ── Tab panels ── */
+    .tab-panel { display: none; flex: 1; }
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* ── Two-col layout ── */
+    .panels { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: #060E19; }
+    .panel { background: #0D1B2A; padding: 24px 24px 28px; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+
+    .panel-head { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid #1B3A5C; }
+    .step-num { width: 22px; height: 22px; border-radius: 50%; background: #EAB308; color: #0D1B2A; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .panel-head h2 { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #4A6FA5; }
+    .panel-head .ph-dir { margin-left: auto; font-size: 11px; color: #1B3A5C; letter-spacing: .06em; text-transform: uppercase; }
+
+    /* ── Drop zone ── */
+    .drop-zone { border: 2px dashed #1B3A5C; border-radius: 8px; padding: 32px 20px; text-align: center; cursor: pointer; transition: border-color .15s, background .15s; position: relative; }
+    .drop-zone:hover { border-color: #1D4ED8; background: rgba(29,78,216,.04); }
+    .drop-zone.drag-over { border-color: #1D4ED8; background: rgba(29,78,216,.07); }
+    .drop-zone.loaded { border-color: #16A34A; background: rgba(22,163,74,.05); padding: 18px 20px; }
+    .drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .dz-icon { font-size: 26px; color: #4A6FA5; margin-bottom: 8px; }
+    .dz-label { font-size: 13px; color: #94A3B8; }
+    .dz-label strong { color: #1D4ED8; text-decoration: underline; font-weight: 500; }
+    .dz-hint { font-size: 11px; color: #4A6FA5; margin-top: 4px; }
+    .file-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+    .file-check { font-size: 18px; color: #16A34A; flex-shrink: 0; }
+    .file-name { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 500; color: #F0F4F8; }
+    .file-meta { font-size: 11px; color: #4A6FA5; margin-top: 1px; }
+    .file-clear { margin-left: auto; background: none; border: 1px solid #1B3A5C; color: #4A6FA5; font-size: 13px; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color .12s, color .12s; }
+    .file-clear:hover { border-color: #DC2626; color: #DC2626; }
+
+    /* ── Button ── */
+    .action-btn { background: #1D4ED8; color: #fff; border: none; border-radius: 6px; padding: 12px 20px; font: 700 12px/1 'Roboto', sans-serif; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; transition: background .15s; width: 100%; }
+    .action-btn:hover:not(:disabled) { background: #1E40AF; }
+    .action-btn:disabled { opacity: .3; cursor: not-allowed; }
+
+    /* ── Status ── */
+    .status { display: none; align-items: flex-start; gap: 8px; padding: 10px 13px; border-radius: 6px; font-size: 12px; font-weight: 500; line-height: 1.4; }
+    .status.ok  { display: flex; background: rgba(22,163,74,.12); border: 1px solid rgba(22,163,74,.25); color: #4ADE80; }
+    .status.err { display: flex; background: rgba(220,38,38,.12); border: 1px solid rgba(220,38,38,.25); color: #F87171; }
+
+    /* ── Preview table ── */
+    .table-wrap { border: 1px solid #1B3A5C; border-radius: 6px; overflow: hidden; overflow-x: auto; max-height: 360px; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th { background: #081322; color: #4A6FA5; font: 700 10px/1 'Roboto', sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 7px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid #1B3A5C; position: sticky; top: 0; z-index: 1; }
+    thead th:first-child, thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4) { text-align: left; }
+    tbody tr { border-bottom: 1px solid rgba(27,58,92,.5); }
+    tbody tr:nth-child(even) { background: rgba(6,14,25,.5); }
+    tbody tr:hover { background: rgba(29,78,216,.07); }
+    tbody td { padding: 6px 9px; color: #94A3B8; font-family: 'Roboto Mono', monospace; font-size: 11px; text-align: right; white-space: nowrap; }
+    tbody td:first-child { text-align: left; font-family: 'Roboto', sans-serif; color: #CBD5E1; font-size: 11px; }
+    tbody td:nth-child(2) { text-align: left; font-family: 'Roboto', sans-serif; color: #F0F4F8; font-weight: 500; font-size: 11px; }
+    tbody td:nth-child(3), tbody td:nth-child(4) { text-align: left; }
+    td.ovr { color: #EAB308; font-weight: 700; }
+    td.pos-g { color: #60A5FA; }
+    td.pos-f { color: #4ADE80; }
+    td.pos-d { color: #F97316; }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 13px; background: rgba(6,14,25,.5); border: 1px solid #1B3A5C; border-radius: 6px; }
+    .legend-item { font-size: 11px; color: #4A6FA5; }
+    .legend-item strong { color: #CBD5E1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>NHL '94 Roster Tool</h1>
+  <span class="hbadge">GENS</span>
+  <div class="team-toggle">
+    <button class="tt-btn active" data-teams="30">30 Teams</button>
+    <button class="tt-btn" data-teams="32">32 Teams</button>
+  </div>
+</header>
+
+<nav class="tab-bar">
+  <button class="tab-btn active" data-tab="players">Players</button>
+  <button class="tab-btn" data-tab="teams">Teams</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════ PLAYERS TAB -->
+<div id="tab-players" class="tab-panel active">
+  <div class="panels">
+
+    <!-- Export Players -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="step-num">1</div>
+        <h2>Export Players to CSV</h2>
+        <span class="ph-dir">ROM → CSV</span>
+      </div>
+      <div class="drop-zone" id="pExpRomZone">
+        <input type="file" id="pExpRomInput" accept=".bin">
+        <div id="pExpRomEmpty">
+          <div class="dz-icon">⬆</div>
+          <div class="dz-label"><strong>Choose ROM file</strong> or drag and drop</div>
+          <div class="dz-hint">.bin — GENS NHL '94 ROM</div>
+        </div>
+        <div id="pExpRomLoaded" class="file-row" style="display:none">
+          <span class="file-check">✓</span>
+          <div><div class="file-name" id="pExpRomName"></div><div class="file-meta" id="pExpRomMeta"></div></div>
+          <button class="file-clear" id="pExpRomClear" type="button">✕</button>
+        </div>
+      </div>
+      <button class="action-btn" id="pExpBtn" disabled>Export Players to CSV</button>
+      <div class="status" id="pExpStatus"></div>
+      <div id="pExpPreview" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>First</th><th>Last</th><th>Abv</th><th>Pos</th><th>JNo</th><th>Ovr</th>
+              <th>Wgt</th><th>Agl</th><th>Spd</th><th>OfA</th><th>DfA</th><th>ShP</th>
+              <th>Chk</th><th>Hnd</th><th>StH</th><th>ShA</th><th>End</th><th>Rgh</th><th>Pas</th><th>Agr</th>
+            </tr></thead>
+            <tbody id="pExpTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><strong>Wgt/Hnd</strong> 0–15</span>
+        <span class="legend-item"><strong>Agl–Agr</strong> 0–6</span>
+        <span class="legend-item"><strong>Ovr</strong> display only</span>
+      </div>
+    </div>
+
+    <!-- Import Players -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="step-num">2</div>
+        <h2>Import Players from CSV</h2>
+        <span class="ph-dir">CSV + ROM → New ROM</span>
+      </div>
+      <div class="drop-zone" id="pImpCsvZone">
+        <input type="file" id="pImpCsvInput" accept=".csv">
+        <div id="pImpCsvEmpty">
+          <div class="dz-icon">⬆</div>
+          <div class="dz-label"><strong>Choose CSV file</strong> or drag and drop</div>
+          <div class="dz-hint">.csv — exported from this tool</div>
+        </div>
+        <div id="pImpCsvLoaded" class="file-row" style="display:none">
+          <span class="file-check">✓</span>
+          <div><div class="file-name" id="pImpCsvName"></div><div class="file-meta" id="pImpCsvMeta"></div></div>
+          <button class="file-clear" id="pImpCsvClear" type="button">✕</button>
+        </div>
+      </div>
+      <div id="pImpPreview" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>First</th><th>Last</th><th>Abv</th><th>Pos</th><th>JNo</th><th>Ovr</th>
+              <th>Wgt</th><th>Agl</th><th>Spd</th><th>OfA</th><th>DfA</th><th>ShP</th>
+              <th>Chk</th><th>Hnd</th><th>StH</th><th>ShA</th><th>End</th><th>Rgh</th><th>Pas</th><th>Agr</th>
+            </tr></thead>
+            <tbody id="pImpTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <button class="action-btn" id="pImpBtn" disabled>Select ROM &amp; Import Players</button>
+      <input type="file" id="pImpRomInput" accept=".bin" style="display:none">
+      <div class="status" id="pImpStatus"></div>
+      <div class="legend">
+        <span class="legend-item"><strong>Lines</strong> reset to defaults on import</span>
+        <span class="legend-item"><strong>Space</strong> redistributed equally across 30 teams</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ TEAMS TAB -->
+<div id="tab-teams" class="tab-panel">
+  <div class="panels">
+
+    <!-- Export Teams -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="step-num">1</div>
+        <h2>Export Team Data to CSV</h2>
+        <span class="ph-dir">ROM → CSV</span>
+      </div>
+      <div class="drop-zone" id="tExpRomZone">
+        <input type="file" id="tExpRomInput" accept=".bin">
+        <div id="tExpRomEmpty">
+          <div class="dz-icon">⬆</div>
+          <div class="dz-label"><strong>Choose ROM file</strong> or drag and drop</div>
+          <div class="dz-hint">.bin — GENS NHL '94 ROM</div>
+        </div>
+        <div id="tExpRomLoaded" class="file-row" style="display:none">
+          <span class="file-check">✓</span>
+          <div><div class="file-name" id="tExpRomName"></div><div class="file-meta" id="tExpRomMeta"></div></div>
+          <button class="file-clear" id="tExpRomClear" type="button">✕</button>
+        </div>
+      </div>
+      <button class="action-btn" id="tExpBtn" disabled>Export Team Data to CSV</button>
+      <div class="status" id="tExpStatus"></div>
+      <div id="tExpPreview" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>City</th><th>Abv</th><th>Team</th><th>Arena</th><th>OVR</th><th>OFF</th><th>DEF</th><th>PK</th><th>PP</th><th>HOME</th><th>ROAD</th>
+            </tr></thead>
+            <tbody id="tExpTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="legend">
+        <span class="legend-item"><strong>OVR</strong> 0–99</span>
+        <span class="legend-item"><strong>OFF/DEF</strong> 0–7</span>
+        <span class="legend-item"><strong>PK/PP/HOME</strong> 0–2</span>
+        <span class="legend-item"><strong>ROAD</strong> 0–3</span>
+      </div>
+    </div>
+
+    <!-- Import Teams -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="step-num">2</div>
+        <h2>Import Team Data from CSV</h2>
+        <span class="ph-dir">CSV + ROM → New ROM</span>
+      </div>
+      <div class="drop-zone" id="tImpCsvZone">
+        <input type="file" id="tImpCsvInput" accept=".csv">
+        <div id="tImpCsvEmpty">
+          <div class="dz-icon">⬆</div>
+          <div class="dz-label"><strong>Choose CSV file</strong> or drag and drop</div>
+          <div class="dz-hint">.csv — exported from this tool</div>
+        </div>
+        <div id="tImpCsvLoaded" class="file-row" style="display:none">
+          <span class="file-check">✓</span>
+          <div><div class="file-name" id="tImpCsvName"></div><div class="file-meta" id="tImpCsvMeta"></div></div>
+          <button class="file-clear" id="tImpCsvClear" type="button">✕</button>
+        </div>
+      </div>
+      <div id="tImpPreview" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>City</th><th>Abv</th><th>Team</th><th>Arena</th><th>OVR</th><th>OFF</th><th>DEF</th><th>PK</th><th>PP</th><th>HOME</th><th>ROAD</th>
+            </tr></thead>
+            <tbody id="tImpTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <button class="action-btn" id="tImpBtn" disabled>Select ROM &amp; Import Team Data</button>
+      <input type="file" id="tImpRomInput" accept=".bin" style="display:none">
+      <div class="status" id="tImpStatus"></div>
+      <div class="legend">
+        <span class="legend-item"><strong>OFF</strong> 1=Weak 7=Strong</span>
+        <span class="legend-item"><strong>DEF</strong> 7=Weak 1=Strong</span>
+        <span class="legend-item"><strong>PK</strong> 2=Weak 0=Strong</span>
+        <span class="legend-item"><strong>PP/HOME</strong> 0=Weak 2=Strong</span>
+        <span class="legend-item"><strong>ROAD</strong> 0=Strong 3=Brutal</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let nTeams = 30;
+
+// Known team-area end offsets. 30-team is derived dynamically via parseNameSections.
+// 32-team has a fixed boundary that can't be safely inferred from name sections.
+const BLOCK_AREA_END  = { 32: 2030418 }; // last byte is 2030417 → exclusive end 2030418
+const OVERALL_BASE    = { 30: 1952292, 32: 2003636 };
+
+// ═══════════════════════════════════════════════════════════
+//  BINARY HELPERS
+// ═══════════════════════════════════════════════════════════
+function u32(d, o) { return (d[o] * 0x1000000) + (d[o+1] << 16) + (d[o+2] << 8) + d[o+3]; }
+function u16(d, o) { return (d[o] << 8) + d[o+1]; }
+function readStr(d, o, len) {
+  let s = '';
+  for (let i = 0; i < len; i++) { if (!d[o+i]) break; s += String.fromCharCode(d[o+i]); }
+  return s.trim();
+}
+
+// Read team block absolute pointers from offset 782 (nTeams entries)
+function tmPtrs(data) {
+  const ptrs = [];
+  for (let i = 0; i < nTeams; i++) ptrs.push(u32(data, 782 + i * 4));
+  return ptrs;
+}
+
+// Read all 4 name sections from a block (city, abv, nickname, arena)
+function readTeamName(data, ptr) {
+  const tmOff = u16(data, ptr + 4);
+  let pos = ptr + tmOff;
+  const cityLen  = u16(data, pos); const city  = readStr(data, pos + 2, cityLen  - 2); pos += cityLen;
+  const abvLen   = u16(data, pos); const abv   = readStr(data, pos + 2, abvLen   - 2); pos += abvLen;
+  const nmLen    = u16(data, pos); const name  = readStr(data, pos + 2, nmLen    - 2); pos += nmLen;
+  const arenaLen = u16(data, pos); const arena = readStr(data, pos + 2, arenaLen - 2);
+  return { city, abv, name, arena };
+}
+
+// Parse exactly 4 name sections (city, abv, nickname, arena) for the last team.
+// Stops at 4 sections — do NOT read further or we bleed into the game code
+// that follows the team area in the ROM.
+function parseNameSections(data, nameStart) {
+  let pos = nameStart;
+  for (let s = 0; s < 4; s++) {
+    if (pos + 2 > data.length) break;
+    const secLen = u16(data, pos);
+    if (secLen < 2) break;
+    pos += secLen;
+  }
+  return pos - nameStart;
+}
+
+// Encode a name string as a length-prefixed section.
+// Content is padded to even byte count (same alignment rule as player names).
+// secLen = 2 + paddedLen, stored as u16 big-endian.
+function buildNameSection(str) {
+  const bytes = Array.from(str).map(c => c.charCodeAt(0));
+  if (bytes.length % 2 !== 0) bytes.push(0); // null pad to even
+  const secLen = 2 + bytes.length;
+  return new Uint8Array([secLen >> 8, secLen & 0xFF, ...bytes]);
+}
+
+// Goalie count from bytes 80-81:
+// nG goalies → first nG nibbles of the 4-nibble hex string are '1', rest '0'
+// 4 goalies → all '1' (no '0'), find returns -1
+function readGoalieCount(data, ptr) {
+  const hi = data[ptr + 80], lo = data[ptr + 81];
+  const hex4 = hi.toString(16).padStart(2,'0') + lo.toString(16).padStart(2,'0');
+  const idx = hex4.indexOf('0');
+  return idx < 0 ? 4 : idx;
+}
+
+// Goalie byte pair for writing [byte80, byte81]
+function goalieBytes(nG) {
+  if (nG === 1) return [0x10, 0x00];
+  if (nG === 2) return [0x11, 0x00];
+  if (nG === 3) return [0x11, 0x10];
+  return [0x11, 0x11]; // 4
+}
+
+// Default 8-line assignment block (64 bytes for header offsets 82–145)
+// Each line: G(1), D1, D2, F1, F2, F3, F4, null
+function buildDefaultLines(nG, nF) {
+  const firstF = nG + 1;        // 1-indexed first forward
+  const firstD = nG + nF + 1;  // 1-indexed first defender
+  const line = [1, firstD, firstD + 1, firstF, firstF + 1, firstF + 2, firstF + 3];
+  const buf = new Uint8Array(64);
+  let pos = 0;
+  for (let i = 0; i < 8; i++) {
+    for (const p of line) buf[pos++] = p;
+    buf[pos++] = 0;
+  }
+  return buf;
+}
+
+// Write u16 big-endian into Uint8Array
+function writeU16(buf, pos, val) {
+  buf[pos]   = (val >> 8) & 0xFF;
+  buf[pos+1] = val & 0xFF;
+}
+
+// Write u32 big-endian into Uint8Array
+function writeU32(buf, pos, val) {
+  buf[pos]   = (val >>> 24) & 0xFF;
+  buf[pos+1] = (val >>> 16) & 0xFF;
+  buf[pos+2] = (val >>> 8)  & 0xFF;
+  buf[pos+3] = val & 0xFF;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER EXPORT  (ROM → player rows)
+// ═══════════════════════════════════════════════════════════
+function exportPlayers(data) {
+  const ptrs = tmPtrs(data);
+  const rows = [];
+
+  for (const ptr of ptrs) {
+    const { abv } = readTeamName(data, ptr);
+    const plOff  = u16(data, ptr);
+    const nG     = readGoalieCount(data, ptr);
+    const fdByte = data[ptr + 79];
+    const nF     = (fdByte >> 4) & 0xF;
+
+    let pos = ptr + plOff;
+    let playerIdx = 0;
+
+    // Read until the 00 02 terminator rather than trusting nTotal from the header,
+    // so a bad F/D byte doesn't send pos past the end of the array.
+    while (pos + 1 < data.length) {
+      const pnl = u16(data, pos);
+      if (pnl < 4) break; // 00 02 terminator or corrupt — stop
+
+      pos += 2;
+      playerIdx++;
+
+      // pnl includes the 2 length bytes; remaining bytes = name + optional null pad
+      let nameStr = '';
+      for (let j = 0; j < pnl - 2; j++) {
+        const ch = data[pos++];
+        if (ch !== 0) nameStr += String.fromCharCode(ch);
+      }
+      const jno = data[pos++].toString(16).padStart(2, '0');
+
+      // 7 attribute bytes → 14 nibbles
+      const att = [];
+      for (let b = 0; b < 7; b++) {
+        att.push((data[pos] >> 4) & 0xF);
+        att.push(data[pos] & 0xF);
+        pos++;
+      }
+
+      const posType = playerIdx <= nG ? 'G' : playerIdx <= nG + nF ? 'F' : 'D';
+
+      let total;
+      if (posType === 'G') {
+        total = Math.floor(att[1]*4.5) + Math.floor(att[4]*4.5) + Math.floor(att[5]*4.5)
+              + att[10] + att[11] + att[12] + att[13];
+      } else {
+        total = att[1]*2 + att[2]*3 + att[3]*3 + att[4]*2 + att[5]
+              + att[6]*2 + att[8]*3 + att[9]*2 + att[10] + att[12];
+      }
+      const ovr = Math.min(99, total < 50 ? Math.floor(25 + total / 2) : total);
+
+      const parts = nameStr.split(' ');
+      rows.push({
+        'First': parts[0] || '', 'Last': parts.slice(1).join(' ') || '',
+        'Abv': abv, 'Pos': posType, 'JNo': jno, 'Ovr': ovr,
+        'Wgt': att[0], 'Agl': att[1], 'Spd': att[2], 'OfA': att[3], 'DfA': att[4],
+        'ShP-PkC': att[5], 'Chk': att[6], 'Hnd': att[7], 'StH': att[8], 'ShA': att[9],
+        'End-StR': att[10], 'Rgh-StL': att[11], 'Pas-GlR': att[12], 'Agr-GlL': att[13]
+      });
+    }
+  }
+  return rows;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER IMPORT  (CSV rows + ROM → new ROM)
+//  Equal player-space redistribution across all 30 teams.
+// ═══════════════════════════════════════════════════════════
+function importPlayers(romBuf, playerRows) {
+  const PLAYER_FIELDS = ['First','Last','Abv','Pos','JNo','Ovr','Wgt','Agl','Spd','OfA','DfA',
+                         'ShP-PkC','Chk','Hnd','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+
+  if (playerRows.length === 0) throw new Error('CSV is empty.');
+  const cols = Object.keys(playerRows[0]);
+  const missing = PLAYER_FIELDS.filter(f => !cols.includes(f));
+  if (missing.length) throw new Error(`CSV missing columns: ${missing.join(', ')}`);
+
+  const NAME_RE = /^[A-Za-z.'\-]*$/;
+  const NIBBLE_FIELDS = ['Agl','Spd','OfA','DfA','ShP-PkC','Chk','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+  playerRows.forEach((p, ri) => {
+    const label = `Row ${ri + 1}`;
+    if (!['G','F','D'].includes(p['Pos']))
+      throw new Error(`${label}: Pos must be G, F, or D (got "${p['Pos']}")`);
+    const first = String(p['First'] ?? ''), last = String(p['Last'] ?? '');
+    if (first.length + 1 + last.length > 18)
+      throw new Error(`${label}: "${first} ${last}" is ${first.length + 1 + last.length} chars — max 18`);
+    if (!NAME_RE.test(first))
+      throw new Error(`${label}: First "${first}" has invalid characters (letters, - . ' only)`);
+    if (!NAME_RE.test(last))
+      throw new Error(`${label}: Last "${last}" has invalid characters (letters, - . ' only)`);
+    if (!/^[0-9a-fA-F]{1,2}$/.test(String(p['JNo'])))
+      throw new Error(`${label}: JNo "${p['JNo']}" must be a hex value 00–FF`);
+    ['Wgt','Hnd'].forEach(f => {
+      const v = parseInt(p[f]);
+      if (isNaN(v) || v < 0 || v > 15)
+        throw new Error(`${label}: ${f} must be 0–15 (got "${p[f]}")`);
+    });
+    NIBBLE_FIELDS.forEach(f => {
+      const v = parseInt(p[f]);
+      if (isNaN(v) || v < 0 || v > 6)
+        throw new Error(`${label}: ${f} must be 0–6 (got "${p[f]}")`);
+    });
+  });
+
+  const abvOrder = [];
+  const teamMap  = {};
+  for (const row of playerRows) {
+    const abv = (row['Abv'] || '').trim();
+    if (!teamMap[abv]) { teamMap[abv] = []; abvOrder.push(abv); }
+    teamMap[abv].push(row);
+  }
+  if (abvOrder.length !== nTeams)
+    throw new Error(`CSV has ${abvOrder.length} distinct teams — expected ${nTeams}.`);
+
+  const teamInfo = abvOrder.map(abv => {
+    const players = teamMap[abv];
+    let totalBytes = 0, nG = 0, nF = 0, nD = 0, phase = 0;
+    for (const p of players) {
+      const nameLen = (String(p['First']) + String(p['Last'])).length;
+      totalBytes += (nameLen + 1) % 2 === 0 ? nameLen + 11 : nameLen + 12;
+      if (p['Pos'] === 'G') {
+        if (phase > 0) throw new Error(`${abv}: goalies must be listed before forwards and defense`);
+        nG++;
+      } else if (p['Pos'] === 'F') {
+        if (phase > 1) throw new Error(`${abv}: forwards must be listed before defense`);
+        phase = 1; nF++;
+      } else {
+        phase = 2; nD++;
+      }
+    }
+    return { abv, players, totalBytes, nG, nF, nD };
+  });
+
+  for (const t of teamInfo) {
+    if (t.nG < 1 || t.nG > 4) throw new Error(`${t.abv}: goalies must be 1–4 (found ${t.nG})`);
+    if (t.nF < 1 || t.nF > 15) throw new Error(`${t.abv}: forwards must be 1–15 (found ${t.nF})`);
+    if (t.nD < 1 || t.nD > 15) throw new Error(`${t.abv}: defense must be 1–15 (found ${t.nD})`);
+  }
+
+  const data = new Uint8Array(romBuf);
+  const ptrs = tmPtrs(data);
+  const oldTmOffs = ptrs.map(ptr => u16(data, ptr + 4));
+  const totalSpace = oldTmOffs.reduce((sum, tmOff) => sum + (tmOff - 146), 0);
+
+  // Distribute space evenly. Player spaces must be even so that plOff and tmOff
+  // (146 + even) are always even — required for 68000 word-aligned reads.
+  const baseSpace = Math.floor(totalSpace / nTeams);
+  const baseEven  = baseSpace % 2 === 0 ? baseSpace : baseSpace - 1;
+  const extra2    = totalSpace - baseEven * nTeams;
+  const teams2    = Math.floor(extra2 / 2);
+  const newPlayerSpaces = Array.from({length: nTeams}, (_, i) =>
+    i >= nTeams - teams2 ? baseEven + 2 : baseEven
+  );
+
+  for (let i = 0; i < nTeams; i++) {
+    const needed = teamInfo[i].totalBytes + 2;
+    if (needed > newPlayerSpaces[i])
+      throw new Error(`${teamInfo[i].abv}: needs ${needed} bytes, only ${newPlayerSpaces[i]} available. Remove ${needed - newPlayerSpaces[i]} bytes of players.`);
+  }
+
+  const areaEnd  = BLOCK_AREA_END[nTeams] ?? null;
+  const nameData = ptrs.map((ptr, i) => {
+    const nameStart = ptr + oldTmOffs[i];
+    if (i < nTeams - 1) return data.slice(nameStart, ptrs[i + 1]);
+    if (areaEnd !== null) return data.slice(nameStart, areaEnd);
+    const size = parseNameSections(data, nameStart);
+    return data.slice(nameStart, nameStart + size);
+  });
+
+  const oldHeaders   = ptrs.map(ptr => data.slice(ptr, ptr + 146));
+  const oldBlocksEnd = areaEnd ?? (ptrs[nTeams - 1] + oldTmOffs[nTeams - 1] + nameData[nTeams - 1].length);
+
+  const encoder = new TextEncoder();
+  const blocks  = [];
+  const newPtrs = [ptrs[0]];
+
+  for (let i = 0; i < nTeams; i++) {
+    const { players, totalBytes, nG, nF, nD } = teamInfo[i];
+    const playerSpace = newPlayerSpaces[i];
+    const emptySpace  = playerSpace - totalBytes - 2;
+    const newPlOff    = 146 + emptySpace;
+    const newTmOff    = 146 + playerSpace;
+    const blockSize   = newTmOff + nameData[i].length;
+    const block       = new Uint8Array(blockSize);
+
+    block.set(oldHeaders[i], 0);
+    writeU16(block, 0, newPlOff);
+    writeU16(block, 4, newTmOff);
+    block[79] = ((nF & 0xF) << 4) | (nD & 0xF);
+    const [gb1, gb2] = goalieBytes(nG);
+    block[80] = gb1; block[81] = gb2;
+    block.set(buildDefaultLines(nG, nF), 82);
+
+    for (let j = 146; j < newPlOff; j++) block[j] = 0xFF;
+
+    let wPos = newPlOff;
+    for (const p of players) {
+      const nameWithSpace = String(p['First']) + ' ' + String(p['Last']);
+      const nameBytes = encoder.encode(nameWithSpace);
+      const nmlength  = nameWithSpace.length % 2 === 0
+        ? nameWithSpace.length + 2 : nameWithSpace.length + 3;
+      block[wPos++] = 0x00;
+      block[wPos++] = nmlength;
+      block.set(nameBytes, wPos); wPos += nameBytes.length;
+      if (nameWithSpace.length % 2 !== 0) block[wPos++] = 0x00;
+      block[wPos++] = parseInt(String(p['JNo']), 16);
+      const attrStr = buildAttrNibbles(p);
+      for (let b = 0; b < 7; b++)
+        block[wPos++] = parseInt(attrStr.slice(b * 2, b * 2 + 2), 16);
+    }
+
+    block[wPos++] = 0x00;
+    block[wPos++] = 0x02;
+    block.set(nameData[i], newTmOff);
+    blocks.push(block);
+    if (i < nTeams - 1) newPtrs.push(newPtrs[i] + blockSize);
+  }
+
+  const preTeams  = data.slice(0, ptrs[0]);
+  const postTeams = data.slice(oldBlocksEnd);
+  const totalSize = preTeams.length + blocks.reduce((s, b) => s + b.length, 0) + postTeams.length;
+  const newRom    = new Uint8Array(totalSize);
+  let wPos = 0;
+  newRom.set(preTeams, wPos);  wPos += preTeams.length;
+  for (const b of blocks) { newRom.set(b, wPos); wPos += b.length; }
+  newRom.set(postTeams, wPos);
+
+  for (let i = 0; i < nTeams; i++) writeU32(newRom, 782 + i * 4, newPtrs[i]);
+
+  // Recalculate Sega Genesis checksum (words from 0x200 to end, stored at 0x18E)
+  let cksum = 0;
+  for (let i = 0x200; i + 1 < newRom.length; i += 2)
+    cksum = (cksum + (newRom[i] << 8) + newRom[i + 1]) & 0xFFFF;
+  newRom[0x18E] = (cksum >> 8) & 0xFF;
+  newRom[0x18F] = cksum & 0xFF;
+
+  return newRom;
+}
+
+// Build 14-nibble attribute hex string from a player row
+// Wgt and Hnd are decimal 0-15 (need hex conversion); rest are single nibble chars directly
+function buildAttrNibbles(p) {
+  const h = v => parseInt(v).toString(16); // decimal → single hex char (e.g. 10 → 'a')
+  return h(p['Wgt'])
+    + String(p['Agl'])  + String(p['Spd'])    + String(p['OfA'])    + String(p['DfA'])
+    + String(p['ShP-PkC']) + String(p['Chk'])
+    + h(p['Hnd'])
+    + String(p['StH'])  + String(p['ShA'])    + String(p['End-StR'])
+    + String(p['Rgh-StL']) + String(p['Pas-GlR']) + String(p['Agr-GlL']);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TEAM EXPORT  (ROM → team rows)
+// ═══════════════════════════════════════════════════════════
+function exportTeams(data) {
+  return tmPtrs(data).map((ptr, i) => {
+    const t = readTeamName(data, ptr);
+    const b76 = data[ptr+76], b77 = data[ptr+77], b78 = data[ptr+78];
+    return {
+      'Team City': t.city, 'Abv': t.abv, 'Team Name': t.name, 'Arena': t.arena,
+      'Overall':  data[OVERALL_BASE[nTeams] + i],
+      'Offense':  (b76 >> 4) & 0xF, 'Defense': b76 & 0xF,
+      'PK':       (b77 >> 4) & 0xF, 'PP':      b77 & 0xF,
+      'Home':     (b78 >> 4) & 0xF, 'Road':    b78 & 0xF,
+    };
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TEAM IMPORT  (CSV rows + ROM → new ROM)
+// ═══════════════════════════════════════════════════════════
+function importTeams(romBuf, rows) {
+  if (rows.length !== nTeams) throw new Error(`CSV has ${rows.length} rows — expected ${nTeams}.`);
+
+  // Validate advantages and overalls
+  rows.forEach((row, i) => {
+    const ovr  = +row['Overall'];
+    const off  = +row['Offense'], def  = +row['Defense'];
+    const pk   = +row['PK'],      pp   = +row['PP'];
+    const home = +row['Home'],    road = +row['Road'];
+    if (isNaN(ovr)  || ovr  < 0 || ovr  > 99) throw new Error(`Row ${i+1}: Overall must be 0–99`);
+    if (isNaN(off)  || off  < 0 || off  > 7 || isNaN(def) || def < 0 || def > 7)
+      throw new Error(`Row ${i+1}: Offense/Defense must be 0–7`);
+    if (isNaN(pk)   || pk   < 0 || pk   > 2 || isNaN(pp)  || pp  < 0 || pp  > 2)
+      throw new Error(`Row ${i+1}: PK/PP must be 0–2`);
+    if (isNaN(home) || home < 0 || home > 2) throw new Error(`Row ${i+1}: Home must be 0–2`);
+    if (isNaN(road) || road < 0 || road > 3) throw new Error(`Row ${i+1}: Road must be 0–3`);
+  });
+
+  const hasNames = 'Arena' in rows[0];
+
+  // ── Name validation (only when name columns are present) ──
+  if (hasNames) {
+    rows.forEach((row, i) => {
+      const label = `Row ${i+1}`;
+      ['Team City','Team Name','Arena'].forEach(f => {
+        if (!row[f] || !row[f].trim()) throw new Error(`${label}: ${f} must not be empty`);
+      });
+      const abv = (row['Abv'] || '').trim();
+      if (!/^[A-Za-z0-9]{2,3}$/.test(abv))
+        throw new Error(`${label}: Abv must be 2–3 letters/numbers (got "${abv}")`);
+    });
+    const abvSeen = new Set();
+    rows.forEach((row, i) => {
+      const abv = (row['Abv'] || '').trim().toUpperCase();
+      if (abvSeen.has(abv)) throw new Error(`Row ${i+1}: Abv "${(row['Abv']||'').trim()}" is a duplicate — all abbreviations must be unique`);
+      abvSeen.add(abv);
+    });
+  }
+
+  const data = new Uint8Array(romBuf);
+  const ptrs = tmPtrs(data);
+
+  // ── No name changes: in-place advantage + overall write ──────
+  if (!hasNames) {
+    const out = new Uint8Array(data);
+    rows.forEach((row, i) => {
+      out[OVERALL_BASE[nTeams] + i] = +row['Overall'];
+      const ptr = ptrs[i];
+      out[ptr+76] = ((+row['Offense'])<<4) | (+row['Defense']);
+      out[ptr+77] = ((+row['PK'])<<4)      | (+row['PP']);
+      out[ptr+78] = ((+row['Home'])<<4)    | (+row['Road']);
+    });
+    let cksum = 0;
+    for (let i = 0x200; i + 1 < out.length; i += 2)
+      cksum = (cksum + (out[i] << 8) + out[i + 1]) & 0xFFFF;
+    out[0x18E] = (cksum >> 8) & 0xFF;
+    out[0x18F] = cksum & 0xFF;
+    return out;
+  }
+
+  // ── Name changes: in-place block modification ─────────────────
+  // Each team's total block size is kept FIXED. Changes in name-section
+  // length are absorbed by the 0xFF free-space region that sits between
+  // the 146-byte header and the player records. Pointer table never changes.
+  const oldTmOffs = ptrs.map(ptr => u16(data, ptr + 4));
+
+  const areaEnd = BLOCK_AREA_END[nTeams] ??
+    (ptrs[nTeams-1] + oldTmOffs[nTeams-1] +
+     parseNameSections(data, ptrs[nTeams-1] + oldTmOffs[nTeams-1]));
+
+  const blockSizes = ptrs.map((ptr, i) =>
+    i < nTeams - 1 ? ptrs[i + 1] - ptr : areaEnd - ptr
+  );
+
+  const newNameData = rows.map(row => {
+    const parts = [
+      buildNameSection(row['Team City'].trim()),
+      buildNameSection(row['Abv'].trim()),
+      buildNameSection(row['Team Name'].trim()),
+      buildNameSection(row['Arena'].trim()),
+    ];
+    const buf = new Uint8Array(parts.reduce((s, p) => s + p.length, 0));
+    let pos = 0;
+    for (const p of parts) { buf.set(p, pos); pos += p.length; }
+    return buf;
+  });
+
+  // Validate all teams fit before writing anything
+  rows.forEach((row, i) => {
+    const oldPlOff    = u16(data, ptrs[i]);
+    const playerBytes = oldTmOffs[i] - oldPlOff;
+    const newFreeSpace = blockSizes[i] - 146 - playerBytes - newNameData[i].length;
+    if (newFreeSpace < 0)
+      throw new Error(`Row ${i+1} (${(row['Abv']||'').trim()}): names are ${-newFreeSpace} bytes too large for this team's block — shorten a name`);
+  });
+
+  const out = new Uint8Array(data);
+  rows.forEach((row, i) => {
+    const ptr         = ptrs[i];
+    const oldPlOff    = u16(data, ptr);
+    const oldTmOff    = oldTmOffs[i];
+    const playerBytes = oldTmOff - oldPlOff;
+    const newNameSize = newNameData[i].length;
+    const totalBlock  = blockSizes[i];
+    const newFreeSpace = totalBlock - 146 - playerBytes - newNameSize;
+    const newPlOff    = 146 + newFreeSpace;
+    const newTmOff    = totalBlock - newNameSize;
+
+    writeU16(out, ptr + 0, newPlOff);
+    writeU16(out, ptr + 4, newTmOff);
+    out[ptr + 76] = ((+row['Offense']) << 4) | (+row['Defense']);
+    out[ptr + 77] = ((+row['PK'])      << 4) | (+row['PP']);
+    out[ptr + 78] = ((+row['Home'])    << 4) | (+row['Road']);
+
+    for (let j = 146; j < newPlOff; j++) out[ptr + j] = 0xFF;
+    out.set(data.slice(ptr + oldPlOff, ptr + oldTmOff), ptr + newPlOff);
+    out.set(newNameData[i], ptr + newTmOff);
+  });
+
+  rows.forEach((row, i) => { out[OVERALL_BASE[nTeams] + i] = +row['Overall']; });
+
+  let cksum = 0;
+  for (let i = 0x200; i + 1 < out.length; i += 2)
+    cksum = (cksum + (out[i] << 8) + out[i + 1]) & 0xFFFF;
+  out[0x18E] = (cksum >> 8) & 0xFF;
+  out[0x18F] = cksum & 0xFF;
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CSV UTILITIES
+// ═══════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = csvSplit(lines[0]);
+  return lines.slice(1)
+    .map(line => {
+      const vals = csvSplit(line);
+      const obj = {};
+      headers.forEach((h, i) => { obj[h.trim()] = (vals[i] ?? '').trim(); });
+      return obj;
+    })
+    .filter(r => Object.values(r).some(v => v !== ''));
+}
+
+function csvSplit(line) {
+  const out = []; let cur = '', inQ = false;
+  for (const c of line) {
+    if (c === '"') inQ = !inQ;
+    else if (c === ',' && !inQ) { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+function toCSV(rows) {
+  if (!rows.length) return '';
+  const cols = Object.keys(rows[0]);
+  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  return [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\r\n');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DOWNLOAD UTILITIES
+// ═══════════════════════════════════════════════════════════
+function dlCSV(rows, name) { dl(new Blob([toCSV(rows)], {type:'text/csv'}), name); }
+function dlBin(u8, name)   { dl(new Blob([u8], {type:'application/octet-stream'}), name); }
+function dl(blob, name) {
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), {href: url, download: name}).click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UI UTILITIES
+// ═══════════════════════════════════════════════════════════
+function fmtSize(b) { return b > 1048576 ? `${(b/1048576).toFixed(1)} MB` : `${Math.round(b/1024)} KB`; }
+
+function setStatus(el, type, msg) {
+  el.className = `status ${type}`;
+  el.innerHTML = (type === 'ok' ? '&#10003; ' : '&#10005; ') + msg;
+}
+function clearStatus(el) { el.className = 'status'; }
+
+// Fill a player preview table
+const P_COLS = ['First','Last','Abv','Pos','JNo','Ovr','Wgt','Agl','Spd','OfA','DfA',
+                'ShP-PkC','Chk','Hnd','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+
+function fillPlayerTable(tbody, rows) {
+  tbody.innerHTML = '';
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    P_COLS.forEach((c, ci) => {
+      const td = document.createElement('td');
+      td.textContent = row[c] ?? '';
+      if (ci === 3) { // Pos
+        td.className = row[c] === 'G' ? 'pos-g' : row[c] === 'F' ? 'pos-f' : 'pos-d';
+      }
+      if (ci === 5) td.className = 'ovr'; // Ovr
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+const T_COLS = ['Team City','Abv','Team Name','Arena','Overall','Offense','Defense','PK','PP','Home','Road'];
+function fillTeamTable(tbody, rows) {
+  tbody.innerHTML = '';
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    T_COLS.forEach((c, ci) => {
+      const td = document.createElement('td');
+      td.textContent = row[c] ?? '';
+      if (ci === 4) td.className = 'ovr';
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DROP ZONE WIRING
+// ═══════════════════════════════════════════════════════════
+function wireDrop(zone, input, onFile) {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) onFile(e.dataTransfer.files[0]);
+  });
+  input.addEventListener('change', () => { if (input.files[0]) onFile(input.files[0]); });
+}
+
+function showLoaded(zone, emptyEl, loadedEl, nameEl, metaEl, file) {
+  zone.classList.add('loaded');
+  emptyEl.style.display = 'none';
+  loadedEl.style.display = 'flex';
+  nameEl.textContent = file.name;
+  metaEl.textContent = fmtSize(file.size);
+}
+
+function clearLoaded(zone, emptyEl, loadedEl, input) {
+  zone.classList.remove('loaded');
+  emptyEl.style.display = '';
+  loadedEl.style.display = 'none';
+  input.value = '';
+}
+
+function readAsArrayBuffer(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsArrayBuffer(file);
+  });
+}
+function readAsText(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result);
+    r.onerror = rej;
+    r.readAsText(file);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TEAM-COUNT TOGGLE
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.tt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    nTeams = +btn.dataset.teams;
+    document.querySelectorAll('.tt-btn').forEach(b => b.classList.toggle('active', b === btn));
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYERS — EXPORT STATE & HANDLERS
+// ═══════════════════════════════════════════════════════════
+let pExpRomData = null, pExpRomFile = null;
+
+wireDrop(
+  document.getElementById('pExpRomZone'),
+  document.getElementById('pExpRomInput'),
+  file => {
+    pExpRomFile = file;
+    showLoaded(
+      document.getElementById('pExpRomZone'), document.getElementById('pExpRomEmpty'),
+      document.getElementById('pExpRomLoaded'), document.getElementById('pExpRomName'),
+      document.getElementById('pExpRomMeta'), file
+    );
+    readAsArrayBuffer(file).then(buf => {
+      pExpRomData = new Uint8Array(buf);
+      document.getElementById('pExpBtn').disabled = false;
+      clearStatus(document.getElementById('pExpStatus'));
+      document.getElementById('pExpPreview').style.display = 'none';
+    });
+  }
+);
+
+document.getElementById('pExpRomClear').addEventListener('click', e => {
+  e.stopPropagation();
+  pExpRomData = null; pExpRomFile = null;
+  clearLoaded(document.getElementById('pExpRomZone'), document.getElementById('pExpRomEmpty'),
+              document.getElementById('pExpRomLoaded'), document.getElementById('pExpRomInput'));
+  document.getElementById('pExpBtn').disabled = true;
+  document.getElementById('pExpPreview').style.display = 'none';
+  clearStatus(document.getElementById('pExpStatus'));
+});
+
+document.getElementById('pExpBtn').addEventListener('click', () => {
+  const st = document.getElementById('pExpStatus');
+  try {
+    const rows = exportPlayers(pExpRomData);
+    const base = pExpRomFile.name.replace(/\.[^.]+$/, '');
+    dlCSV(rows, `${base}_players.csv`);
+    fillPlayerTable(document.getElementById('pExpTbody'), rows);
+    document.getElementById('pExpPreview').style.display = '';
+    setStatus(st, 'ok', `${rows.length} players exported — CSV downloading`);
+  } catch (err) {
+    setStatus(st, 'err', err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYERS — IMPORT STATE & HANDLERS
+// ═══════════════════════════════════════════════════════════
+let pImpCsvRows = null;
+
+wireDrop(
+  document.getElementById('pImpCsvZone'),
+  document.getElementById('pImpCsvInput'),
+  file => {
+    showLoaded(
+      document.getElementById('pImpCsvZone'), document.getElementById('pImpCsvEmpty'),
+      document.getElementById('pImpCsvLoaded'), document.getElementById('pImpCsvName'),
+      document.getElementById('pImpCsvMeta'), file
+    );
+    const st = document.getElementById('pImpStatus');
+    readAsText(file).then(text => {
+      try {
+        pImpCsvRows = parseCSV(text);
+        fillPlayerTable(document.getElementById('pImpTbody'), pImpCsvRows);
+        document.getElementById('pImpPreview').style.display = '';
+        document.getElementById('pImpBtn').disabled = false;
+        clearStatus(st);
+      } catch (err) {
+        setStatus(st, 'err', 'Could not parse CSV: ' + err.message);
+      }
+    });
+  }
+);
+
+document.getElementById('pImpCsvClear').addEventListener('click', e => {
+  e.stopPropagation();
+  pImpCsvRows = null;
+  clearLoaded(document.getElementById('pImpCsvZone'), document.getElementById('pImpCsvEmpty'),
+              document.getElementById('pImpCsvLoaded'), document.getElementById('pImpCsvInput'));
+  document.getElementById('pImpBtn').disabled = true;
+  document.getElementById('pImpPreview').style.display = 'none';
+  clearStatus(document.getElementById('pImpStatus'));
+});
+
+document.getElementById('pImpBtn').addEventListener('click', () => {
+  document.getElementById('pImpRomInput').click();
+});
+
+document.getElementById('pImpRomInput').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const st = document.getElementById('pImpStatus');
+  readAsArrayBuffer(file).then(buf => {
+    try {
+      const out = importPlayers(buf, pImpCsvRows);
+      const base = file.name.replace(/\.[^.]+$/, '');
+      dlBin(out, `${base}_modified.bin`);
+      setStatus(st, 'ok', `Players imported into ${file.name} — modified ROM downloading`);
+    } catch (err) {
+      setStatus(st, 'err', err.message);
+    }
+    this.value = '';
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TEAMS — EXPORT STATE & HANDLERS
+// ═══════════════════════════════════════════════════════════
+let tExpRomData = null, tExpRomFile = null;
+
+wireDrop(
+  document.getElementById('tExpRomZone'),
+  document.getElementById('tExpRomInput'),
+  file => {
+    tExpRomFile = file;
+    showLoaded(
+      document.getElementById('tExpRomZone'), document.getElementById('tExpRomEmpty'),
+      document.getElementById('tExpRomLoaded'), document.getElementById('tExpRomName'),
+      document.getElementById('tExpRomMeta'), file
+    );
+    readAsArrayBuffer(file).then(buf => {
+      tExpRomData = new Uint8Array(buf);
+      document.getElementById('tExpBtn').disabled = false;
+      clearStatus(document.getElementById('tExpStatus'));
+      document.getElementById('tExpPreview').style.display = 'none';
+    });
+  }
+);
+
+document.getElementById('tExpRomClear').addEventListener('click', e => {
+  e.stopPropagation();
+  tExpRomData = null; tExpRomFile = null;
+  clearLoaded(document.getElementById('tExpRomZone'), document.getElementById('tExpRomEmpty'),
+              document.getElementById('tExpRomLoaded'), document.getElementById('tExpRomInput'));
+  document.getElementById('tExpBtn').disabled = true;
+  document.getElementById('tExpPreview').style.display = 'none';
+  clearStatus(document.getElementById('tExpStatus'));
+});
+
+document.getElementById('tExpBtn').addEventListener('click', () => {
+  const st = document.getElementById('tExpStatus');
+  try {
+    const rows = exportTeams(tExpRomData);
+    const base = tExpRomFile.name.replace(/\.[^.]+$/, '');
+    dlCSV(rows, `${base}_teams.csv`);
+    fillTeamTable(document.getElementById('tExpTbody'), rows);
+    document.getElementById('tExpPreview').style.display = '';
+    setStatus(st, 'ok', `${rows.length} teams exported — CSV downloading`);
+  } catch (err) {
+    setStatus(st, 'err', err.message);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  TEAMS — IMPORT STATE & HANDLERS
+// ═══════════════════════════════════════════════════════════
+let tImpCsvRows = null;
+
+wireDrop(
+  document.getElementById('tImpCsvZone'),
+  document.getElementById('tImpCsvInput'),
+  file => {
+    showLoaded(
+      document.getElementById('tImpCsvZone'), document.getElementById('tImpCsvEmpty'),
+      document.getElementById('tImpCsvLoaded'), document.getElementById('tImpCsvName'),
+      document.getElementById('tImpCsvMeta'), file
+    );
+    const st = document.getElementById('tImpStatus');
+    readAsText(file).then(text => {
+      try {
+        tImpCsvRows = parseCSV(text);
+        fillTeamTable(document.getElementById('tImpTbody'), tImpCsvRows);
+        document.getElementById('tImpPreview').style.display = '';
+        document.getElementById('tImpBtn').disabled = false;
+        clearStatus(st);
+      } catch (err) {
+        setStatus(st, 'err', 'Could not parse CSV: ' + err.message);
+      }
+    });
+  }
+);
+
+document.getElementById('tImpCsvClear').addEventListener('click', e => {
+  e.stopPropagation();
+  tImpCsvRows = null;
+  clearLoaded(document.getElementById('tImpCsvZone'), document.getElementById('tImpCsvEmpty'),
+              document.getElementById('tImpCsvLoaded'), document.getElementById('tImpCsvInput'));
+  document.getElementById('tImpBtn').disabled = true;
+  document.getElementById('tImpPreview').style.display = 'none';
+  clearStatus(document.getElementById('tImpStatus'));
+});
+
+document.getElementById('tImpBtn').addEventListener('click', () => {
+  document.getElementById('tImpRomInput').click();
+});
+
+document.getElementById('tImpRomInput').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const st = document.getElementById('tImpStatus');
+  readAsArrayBuffer(file).then(buf => {
+    try {
+      const out = importTeams(buf, tImpCsvRows);
+      const base = file.name.replace(/\.[^.]+$/, '');
+      dlBin(out, `${base}_modified.bin`);
+      setStatus(st, 'ok', `Team data imported into ${file.name} — modified ROM downloading`);
+    } catch (err) {
+      setStatus(st, 'err', err.message);
+    }
+    this.value = '';
+  });
+});
+</script>
+</body>
+</html>

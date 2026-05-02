@@ -1,0 +1,55 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyinstaller pillow
+
+      - name: Build
+        working-directory: roster-tool-app
+        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.ico --add-data "window.ico;." roster_tool.py
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: NHL94-Roster-Tool-Windows
+          path: "roster-tool-app/dist/NHL94 Roster Tool.exe"
+
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install pyinstaller pillow
+
+      - name: Build
+        working-directory: roster-tool-app
+        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.icns --add-data "window.icns:." roster_tool.py
+
+      - name: Zip app bundle
+        working-directory: roster-tool-app/dist
+        run: zip -r "NHL94-Roster-Tool-Mac.zip" "NHL94 Roster Tool.app"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: NHL94-Roster-Tool-Mac
+          path: roster-tool-app/dist/NHL94-Roster-Tool-Mac.zip
