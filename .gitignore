@@ -6,9 +6,6 @@ nhl94/
 *.smc
 *.sfc
 
-# User-supplied art
-cover.png
-
 # PyInstaller
 dist/
 build/
