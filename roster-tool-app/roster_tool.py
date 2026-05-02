@@ -388,8 +388,10 @@ class App(tk.Tk):
         if os.path.exists(win_ico):
             self.iconbitmap(win_ico)
 
-        # Cover image
+        # Cover image — prefer user-supplied file beside exe, fall back to bundled default
         cover = beside_exe('cover.png')
+        if not os.path.exists(cover):
+            cover = bundled('cover.png')
         if os.path.exists(cover):
             try:
                 from PIL import Image, ImageTk

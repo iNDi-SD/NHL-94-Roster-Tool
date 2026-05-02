@@ -20,7 +20,7 @@ jobs:
 
       - name: Build
         working-directory: roster-tool-app
-        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.ico --add-data "window.ico;." roster_tool.py
+        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.ico --add-data "window.ico;." --add-data "cover.png;." roster_tool.py
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -42,7 +42,7 @@ jobs:
 
       - name: Build
         working-directory: roster-tool-app
-        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.icns --add-data "window.icns:." roster_tool.py
+        run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.icns --add-data "window.icns:." --add-data "cover.png:." roster_tool.py
 
       - name: Zip app bundle
         working-directory: roster-tool-app/dist
