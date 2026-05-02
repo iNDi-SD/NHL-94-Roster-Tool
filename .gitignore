@@ -1,5 +1,17 @@
-# Website project (separate repo)
+# Everything except the roster tool app
 nhl94/
+mockups/
+extractor/
+fonts/
+icons/
+images/
+og_logos/
+players_cards/
+team_logos/
+roster_tool/
+CLAUDE.md
+.claude/
+*.csv
 
 # ROM files
 *.bin
