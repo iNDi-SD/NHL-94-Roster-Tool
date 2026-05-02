@@ -3,7 +3,11 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-windows:
@@ -22,11 +26,17 @@ jobs:
         working-directory: roster-tool-app
         run: pyinstaller --onefile --windowed --name "NHL94 Roster Tool" --icon=icon.ico --add-data "window.ico;." --add-data "cover.png;." roster_tool.py
 
-      - name: Upload
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: NHL94-Roster-Tool-Windows
           path: "roster-tool-app/dist/NHL94 Roster Tool.exe"
+
+      - name: Publish to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "roster-tool-app/dist/NHL94 Roster Tool.exe"
 
   build-mac:
     runs-on: macos-latest
@@ -48,8 +58,14 @@ jobs:
         working-directory: roster-tool-app/dist
         run: zip -r "NHL94-Roster-Tool-Mac.zip" "NHL94 Roster Tool.app"
 
-      - name: Upload
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: NHL94-Roster-Tool-Mac
           path: roster-tool-app/dist/NHL94-Roster-Tool-Mac.zip
+
+      - name: Publish to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: roster-tool-app/dist/NHL94-Roster-Tool-Mac.zip
