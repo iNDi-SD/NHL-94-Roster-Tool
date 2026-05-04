@@ -31,6 +31,3 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
-
-# Local-only web files
-roster-tool/web/guide.html

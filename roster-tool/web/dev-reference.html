@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL '94 Roster Tool: Developer Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0D1B2A;
+      --bg2:       #0A1520;
+      --surface:   #112236;
+      --surface2:  #162940;
+      --border:    rgba(255,255,255,.08);
+      --border2:   rgba(255,255,255,.14);
+      --text:      #CBD5E1;
+      --text-dim:  #64748B;
+      --heading:   #F0F4F8;
+      --accent:    #EAB308;
+
+      --c-read:    #1D4ED8;
+      --c-write:   #B45309;
+      --c-valid:   #9F1239;
+      --c-export:  #166534;
+      --c-import:  #5B21B6;
+      --c-util:    #374151;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg2);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Top nav ── */
+    .topbar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border2);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      height: 54px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-logo { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+    .topbar-title { font-size: 13px; font-weight: 500; color: #94A3B8; }
+    .topbar-title strong { color: var(--heading); }
+    .topbar-pill { margin-left: auto; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #64748B; background: var(--surface); border: 1px solid var(--border2); padding: 4px 10px; border-radius: 4px; }
+
+    /* ── Layout ── */
+    .layout {
+      display: flex;
+      flex: 1;
+      max-width: 1160px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 210px;
+      flex-shrink: 0;
+      padding: 36px 0 48px;
+      position: sticky;
+      top: 54px;
+      height: calc(100vh - 54px);
+      overflow-y: auto;
+    }
+    .sidebar-section { margin-bottom: 28px; }
+    .sidebar-heading { font-size: 9px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--text-dim); padding: 0 16px; margin-bottom: 6px; }
+    .sidebar-link { display: block; font-size: 12px; font-weight: 500; color: #64748B; text-decoration: none; padding: 5px 16px; border-left: 2px solid transparent; transition: color .15s, border-color .15s, background .15s; line-height: 1.4; }
+    .sidebar-link:hover { color: #CBD5E1; background: rgba(255,255,255,.03); border-left-color: var(--border2); }
+    .sidebar-link.active { color: var(--heading); border-left-color: var(--accent); background: rgba(255,255,255,.04); }
+
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      min-width: 0;
+      padding: 48px 0 80px 56px;
+      border-left: 1px solid var(--border);
+    }
+
+    section { margin-bottom: 72px; scroll-margin-top: 72px; }
+
+    /* ── Typography ── */
+    h1 { font-size: 28px; font-weight: 900; color: var(--heading); letter-spacing: -.01em; margin-bottom: 12px; line-height: 1.2; }
+    h1 .sub { display: block; font-size: 14px; font-weight: 400; color: var(--text-dim); letter-spacing: 0; margin-top: 6px; }
+    h2 { font-size: 18px; font-weight: 700; color: var(--heading); margin: 40px 0 14px; padding-top: 40px; border-top: 1px solid var(--border); letter-spacing: -.01em; scroll-margin-top: 72px; }
+    h2:first-of-type { margin-top: 24px; padding-top: 0; border-top: none; }
+    h3 { font-size: 13px; font-weight: 700; color: #94A3B8; letter-spacing: .08em; text-transform: uppercase; margin: 28px 0 10px; }
+    p { font-size: 14px; line-height: 1.75; color: var(--text); margin-bottom: 14px; max-width: 680px; }
+    p:last-child { margin-bottom: 0; }
+    strong { color: var(--heading); font-weight: 600; }
+    code { font-family: 'Roboto Mono', monospace; font-size: 12px; background: var(--surface); border: 1px solid var(--border2); padding: 1px 5px; border-radius: 3px; color: #93C5FD; }
+
+    /* ── Code annotation chips ── */
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 18px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.1);
+      white-space: nowrap;
+    }
+    .chip-cat {
+      padding: 4px 7px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    .chip-fn { padding: 4px 8px; color: var(--heading); background: var(--surface2); }
+    .chip-line { padding: 4px 7px; color: #64748B; background: var(--surface); border-left: 1px solid var(--border2); font-size: 10px; }
+
+    .chip.read   .chip-cat { background: var(--c-read); }
+    .chip.write  .chip-cat { background: var(--c-write); }
+    .chip.valid  .chip-cat { background: var(--c-valid); }
+    .chip.export .chip-cat { background: var(--c-export); }
+    .chip.import .chip-cat { background: var(--c-import); }
+    .chip.util   .chip-cat { background: var(--c-util); }
+
+    /* ── Legend ── */
+    .legend { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 16px 0 28px; }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #64748B; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ── Binary layout diagram ── */
+    .byte-map { display: flex; flex-direction: column; gap: 2px; margin: 20px 0; font-family: 'Roboto Mono', monospace; font-size: 11px; max-width: 680px; }
+    .byte-row { display: grid; grid-template-columns: 64px 1fr; gap: 0; align-items: stretch; }
+    .byte-addr { padding: 6px 10px; color: #475569; font-size: 10px; background: var(--surface); border: 1px solid var(--border); border-right: none; display: flex; align-items: center; justify-content: flex-end; border-radius: 4px 0 0 4px; }
+    .byte-cells { display: flex; border: 1px solid var(--border); border-radius: 0 4px 4px 0; }
+    .byte-cell { flex: 1; padding: 6px 4px; text-align: center; border-right: 1px solid var(--border); color: var(--text); font-size: 10px; line-height: 1.3; }
+    .byte-cell:last-child { border-right: none; }
+    .byte-cell.span2 { flex: 2; }
+    .byte-cell.span4 { flex: 4; }
+    .byte-cell.span8 { flex: 8; }
+    .byte-cell small { display: block; font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+
+    .bc-blue   { background: rgba(29,78,216,.2);   color: #93C5FD; }
+    .bc-amber  { background: rgba(180,83,9,.2);    color: #FCD34D; }
+    .bc-green  { background: rgba(22,163,74,.2);   color: #86EFAC; }
+    .bc-red    { background: rgba(220,38,38,.2);   color: #FCA5A5; }
+    .bc-purple { background: rgba(91,33,182,.2);   color: #C4B5FD; }
+    .bc-slate  { background: rgba(71,85,105,.2);   color: #94A3B8; }
+    .bc-gold   { background: rgba(234,179,8,.15);  color: #FDE68A; }
+
+    /* ── Callout ── */
+    .callout { border-left: 3px solid var(--accent); background: rgba(234,179,8,.06); border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 20px 0; max-width: 680px; }
+    .callout p { font-size: 13px; color: #CBD5E1; margin: 0; }
+    .callout strong { color: var(--accent); }
+    .callout.blue { border-left-color: #3B82F6; background: rgba(59,130,246,.06); }
+    .callout.blue p { color: #93C5FD; }
+    .callout.blue strong { color: #60A5FA; }
+    .callout.red { border-left-color: #EF4444; background: rgba(239,68,68,.06); }
+    .callout.red p { color: #FCA5A5; }
+    .callout.red strong { color: #F87171; }
+
+    /* ── Step list ── */
+    .steps { display: flex; flex-direction: column; gap: 16px; margin: 20px 0; max-width: 680px; }
+    .step { display: flex; gap: 16px; align-items: flex-start; }
+    .step-num { width: 28px; height: 28px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--accent); font-family: 'Roboto Mono', monospace; margin-top: 2px; }
+    .step-body { flex: 1; }
+    .step-title { font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 4px; }
+    .step-desc { font-size: 13px; line-height: 1.65; color: var(--text); margin-bottom: 8px; }
+
+    /* ── Attr nibble grid ── */
+    .nibble-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; margin: 16px 0; max-width: 640px; }
+    .nibble-byte { border: 1px solid var(--border2); border-radius: 4px; overflow: hidden; }
+    .nibble-byte-label { text-align: center; font-size: 9px; color: #475569; font-family: 'Roboto Mono', monospace; background: var(--surface); padding: 3px; border-bottom: 1px solid var(--border); }
+    .nibble-halves { display: flex; }
+    .nibble-half { flex: 1; text-align: center; padding: 6px 2px; font-size: 10px; font-family: 'Roboto Mono', monospace; line-height: 1.3; }
+    .nibble-half:first-child { border-right: 1px solid var(--border); }
+    .nibble-half small { display: block; font-size: 8px; color: var(--text-dim); margin-top: 2px; }
+    .nh-hi { background: rgba(29,78,216,.15); color: #93C5FD; }
+    .nh-lo { background: rgba(22,163,74,.15);  color: #86EFAC; }
+
+    /* ── Validation table ── */
+    .vtable { width: 100%; max-width: 680px; border-collapse: collapse; font-size: 13px; margin: 16px 0; }
+    .vtable th { text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #475569; padding: 7px 12px; background: var(--surface); border: 1px solid var(--border); }
+    .vtable td { padding: 9px 12px; border: 1px solid var(--border); color: var(--text); vertical-align: top; line-height: 1.5; }
+    .vtable tr:nth-child(even) td { background: rgba(255,255,255,.02); }
+    .vtable td:first-child { font-family: 'Roboto Mono', monospace; font-size: 11px; color: #93C5FD; }
+    .vtable td:last-child { color: #64748B; font-size: 12px; }
+
+    /* ── Footer ── */
+    footer { border-top: 1px solid var(--border); padding: 20px 32px; font-size: 11px; color: #374151; text-align: center; }
+
+    @media (max-width: 860px) {
+      .sidebar { display: none; }
+      main { padding: 32px 0 60px; border-left: none; }
+      .layout { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-logo">NHL '94</span>
+  <span class="topbar-title"><strong>Roster Tool</strong>: Developer Guide</span>
+  <span class="topbar-pill">web/index.html</span>
+</div>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Overview</div>
+      <a class="sidebar-link active" href="#intro">Introduction</a>
+      <a class="sidebar-link" href="#legend">Chip Legend</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">ROM Structure</div>
+      <a class="sidebar-link" href="#pointer-table">Pointer Table</a>
+      <a class="sidebar-link" href="#team-block">Team Block Layout</a>
+      <a class="sidebar-link" href="#player-records">Player Names &amp; Attributes</a>
+      <a class="sidebar-link" href="#name-strings">Name Strings</a>
+      <a class="sidebar-link" href="#overall-array">Overall Ratings</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">XLSX Format</div>
+      <a class="sidebar-link" href="#xlsx-team">Team Data Sheet</a>
+      <a class="sidebar-link" href="#xlsx-player">Player Data Sheet</a>
+      <a class="sidebar-link" href="#attr-nibbles">Attribute Nibbles</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Export</div>
+      <a class="sidebar-link" href="#export-flow">Export Flow</a>
+      <a class="sidebar-link" href="#team-count-detect">Team Count Detection</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Import</div>
+      <a class="sidebar-link" href="#import-upload">Upload &amp; Validation</a>
+      <a class="sidebar-link" href="#import-write">ROM Write</a>
+      <a class="sidebar-link" href="#space-calc">Space Calculation</a>
+      <a class="sidebar-link" href="#checksum">Checksum</a>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-heading">Validation Rules</div>
+      <a class="sidebar-link" href="#val-team">Team Data</a>
+      <a class="sidebar-link" href="#val-player">Player Data</a>
+      <a class="sidebar-link" href="#val-cross">Cross-sheet</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ═══ INTRO ═══ -->
+    <section id="intro">
+      <h1>NHL '94 Roster Tool
+        <span class="sub">How the web app reads, edits, and writes player and team data inside a Genesis ROM binary.</span>
+      </h1>
+
+      <p>A Sega Genesis ROM is a binary file. All player and team data lives at fixed memory addresses inside it. This tool reads those raw bytes out to an XLSX spreadsheet and writes modified data back in. No game engine is involved; it's byte manipulation in the browser using <strong>SheetJS</strong> (<code>xlsx-latest</code> CDN) for spreadsheet I/O.</p>
+
+      <p>All logic lives in the inline <code>&lt;script&gt;</code> block at the bottom of <code>web/index.html</code>, starting around line 340. Function references appear throughout this guide as chips with exact line numbers in <code>index.html</code>.</p>
+
+      <div id="legend">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-read)"></div>Binary read</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-write)"></div>Binary write</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-export)"></div>Export logic</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-import)"></div>Import / rebuild</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-valid)"></div>Validation</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--c-util)"></div>Utility / I/O</div>
+        </div>
+        <div class="chips">
+          <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">tmPtrs()</span><span class="chip-line">L:349</span></span>
+          <span class="chip export"><span class="chip-cat">export</span><span class="chip-fn">exportPlayers()</span><span class="chip-line">L:383</span></span>
+          <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validatePlayerRows()</span><span class="chip-line">L:720</span></span>
+          <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">importTeams()</span><span class="chip-line">L:509</span></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ POINTER TABLE ═══ -->
+    <section id="pointer-table">
+      <h2>ROM Structure: The Pointer Table</h2>
+
+      <p>At <strong>byte offset 782</strong> is a table of pointers, one per team. Each pointer is 4 bytes and holds the absolute file offset of that team's data block. Every team lookup starts here.</p>
+
+      <div class="byte-map">
+        <div class="byte-row">
+          <div class="byte-addr">782</div>
+          <div class="byte-cells">
+            <div class="byte-cell span4 bc-blue">Team 0 pointer<small>4 bytes, big-endian u32</small></div>
+            <div class="byte-cell span4 bc-blue">Team 1 pointer<small>4 bytes</small></div>
+            <div class="byte-cell span4 bc-blue">Team 2 pointer<small>4 bytes</small></div>
+            <div class="byte-cell span8 bc-slate">… × 27 more<small>30 or 32 total</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">tmPtrs(d)</span><span class="chip-line">L:349</span></span>
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">u32(d, o)</span><span class="chip-line">L:346</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">writeU32(b, p, v)</span><span class="chip-line">L:380</span></span>
+      </div>
+
+      <p><code>tmPtrs()</code> calls <code>u32()</code> at <code>782 + (i × 4)</code> for each team index, returning an array of absolute byte offsets. After import, <code>writeU32()</code> patches these pointers to their new positions before writing the checksum.</p>
+
+      <div class="callout blue">
+        <p><strong>Big-endian:</strong> The Genesis CPU (Motorola 68000) stores integers most-significant byte first. <code>u32</code> and <code>u16</code> reconstruct values using manual bit shifts: <code>(d[o] * 0x1000000) + (d[o+1] &lt;&lt; 16) + ...</code></p>
+      </div>
+    </section>
+
+    <!-- ═══ TEAM BLOCK ═══ -->
+    <section id="team-block">
+      <h2>Team Block Layout</h2>
+
+      <p>Each team pointer points to a block with a fixed 146-byte header, followed by player records, followed by team name strings. The header stores the byte offsets to both zones.</p>
+
+      <div class="byte-map">
+        <div class="byte-row">
+          <div class="byte-addr">+0</div>
+          <div class="byte-cells">
+            <div class="byte-cell span2 bc-blue">plOff<small>u16 — player list start</small></div>
+            <div class="byte-cell span2 bc-amber">· · ·<small>bytes +2, +3</small></div>
+            <div class="byte-cell span2 bc-amber">tmOff<small>u16 at +4 — name start</small></div>
+            <div class="byte-cell span8 bc-slate">bytes +6 … +75<small>other header fields</small></div>
+          </div>
+        </div>
+        <div class="byte-row">
+          <div class="byte-addr">+76</div>
+          <div class="byte-cells">
+            <div class="byte-cell bc-green">OFF<small>hi</small></div>
+            <div class="byte-cell bc-green">DEF<small>lo</small></div>
+            <div class="byte-cell bc-green">PK<small>hi</small></div>
+            <div class="byte-cell bc-green">PP<small>lo</small></div>
+            <div class="byte-cell bc-green">Home<small>hi</small></div>
+            <div class="byte-cell bc-green">Road<small>lo</small></div>
+            <div class="byte-cell span2 bc-slate">+79: nF/nD<small>hi/lo nibble</small></div>
+          </div>
+        </div>
+        <div class="byte-row">
+          <div class="byte-addr">+80</div>
+          <div class="byte-cells">
+            <div class="byte-cell span2 bc-purple">Goalie count<small>2-byte encoding</small></div>
+            <div class="byte-cell span8 bc-purple">Default lines<small>bytes 82–145, 64 bytes total</small></div>
+          </div>
+        </div>
+        <div class="byte-row">
+          <div class="byte-addr">+plOff</div>
+          <div class="byte-cells">
+            <div class="byte-cell span8 bc-red">Player records<small>variable length, terminated by 0x00 0x02</small></div>
+          </div>
+        </div>
+        <div class="byte-row">
+          <div class="byte-addr">+tmOff</div>
+          <div class="byte-cells">
+            <div class="byte-cell span8 bc-gold">Team name strings<small>city · abv · name · arena</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">u16(d, o)</span><span class="chip-line">L:347</span></span>
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">readGoalieCount(d, ptr)</span><span class="chip-line">L:368</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">goalieBytes(n)</span><span class="chip-line">L:372</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">buildDefaultLines(nG, nF)</span><span class="chip-line">L:373</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">writeU16(b, p, v)</span><span class="chip-line">L:379</span></span>
+      </div>
+
+      <h3>Team ratings: bytes 76–78</h3>
+      <p>Three bytes pack six values using nibbles. Byte 76 holds Offense (high nibble) and Defense (low nibble). Byte 77 holds PK and PP. Byte 78 holds Home and Road. Export reads them with <code>&gt;&gt; 4</code> and <code>&amp; 0xF</code>; import packs them back with <code>(off &lt;&lt; 4) | def</code>.</p>
+
+      <h3>Goalie count: bytes 80–81</h3>
+      <p><code>readGoalieCount()</code> converts these two bytes to a hex string and counts leading non-zero hex digits. <code>goalieBytes(n)</code> reverses it: 1 goalie → <code>[0x10, 0x00]</code>, 2 → <code>[0x11, 0x00]</code>, 3 → <code>[0x11, 0x10]</code>, 4 → <code>[0x11, 0x11]</code>.</p>
+
+      <h3>Player count: byte 79</h3>
+      <p>The high nibble of byte 79 is <em>nF</em> (forward count); the low nibble is <em>nD</em> (defense count). Goalie count comes from bytes 80–81. These three values determine player position during both export and import.</p>
+    </section>
+
+    <!-- ═══ PLAYER RECORDS ═══ -->
+    <section id="player-records">
+      <h2>Player Names &amp; Attributes</h2>
+
+      <p>Players are stored consecutively starting at <code>plOff</code>. Each record is variable-length because names vary. A <code>0x00 0x02</code> sentinel ends the list.</p>
+
+      <div class="byte-map">
+        <div class="byte-row">
+          <div class="byte-addr">player</div>
+          <div class="byte-cells">
+            <div class="byte-cell span2 bc-blue">nml<small>u16 — name record length</small></div>
+            <div class="byte-cell span8 bc-blue">Name bytes (ASCII)<small>padded to even total length</small></div>
+            <div class="byte-cell span2 bc-amber">JNo<small>hex byte</small></div>
+            <div class="byte-cell span8 bc-green">7 attribute bytes<small>14 nibbles</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip export"><span class="chip-cat">export</span><span class="chip-fn">exportPlayers(data)</span><span class="chip-line">L:383</span></span>
+        <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">importPlayers(romBuf, rows)</span><span class="chip-line">L:416</span></span>
+      </div>
+
+      <h3>Name length field (nml)</h3>
+      <p>The <code>nml</code> u16 counts itself. A 13-character name like "Wayne Gretzky" has <code>nml = 16</code>: 13 chars + 1 padding byte (to reach even alignment) + 2 for the length field itself. A 12-char even-length name has <code>nml = 14</code>: 12 chars + 2. Padding is only appended when the character count is odd; the Genesis requires word-aligned data.</p>
+
+      <p>On import, <code>importPlayers()</code> computes <code>nml = name.length % 2 === 0 ? name.length + 2 : name.length + 3</code>. The XLSX stores First and Last separately; the ROM stores them as <code>"First Last"</code> with a space. The combined name must be ≤ 20 characters.</p>
+
+      <h3>Jersey number</h3>
+      <p>One byte, stored as its hex value directly. Jersey #17 is stored as <code>0x17</code>. The XLSX column <code>JNo</code> uses one- or two-character hex strings: <code>11</code>, <code>17</code>, <code>0A</code>.</p>
+
+      <h3>Position detection</h3>
+      <p>There is no position byte in the record. Position is inferred by counting: the first <em>nG</em> players are goalies, the next <em>nF</em> are forwards, the rest are defense. <em>nG</em> comes from bytes 80–81 via <code>readGoalieCount()</code>; <em>nF</em> comes from <code>(data[ptr+79] &gt;&gt; 4) &amp; 0xF</code>.</p>
+    </section>
+
+    <!-- ═══ NAME STRINGS ═══ -->
+    <section id="name-strings">
+      <h2>Team Name Strings</h2>
+
+      <p>After the player list, the block holds four length-prefixed ASCII strings in a fixed order: <strong>City → Abbreviation → Team Name → Arena</strong>. Each is preceded by a 2-byte length field (which counts itself) and padded to an even total.</p>
+
+      <div class="byte-map">
+        <div class="byte-row">
+          <div class="byte-addr">+tmOff</div>
+          <div class="byte-cells">
+            <div class="byte-cell span2 bc-gold">len</div>
+            <div class="byte-cell span4 bc-gold">City</div>
+            <div class="byte-cell span2 bc-amber">len</div>
+            <div class="byte-cell bc-amber">Abv</div>
+            <div class="byte-cell span2 bc-red">len</div>
+            <div class="byte-cell span4 bc-red">Name</div>
+            <div class="byte-cell span2 bc-purple">len</div>
+            <div class="byte-cell span4 bc-purple">Arena</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">readTeamName(d, ptr)</span><span class="chip-line">L:350</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">buildNameSection(str)</span><span class="chip-line">L:363</span></span>
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">parseNameSections(d, start)</span><span class="chip-line">L:358</span></span>
+      </div>
+
+      <p><code>readTeamName()</code> reads all four strings sequentially from <code>ptr + tmOff</code>. <code>parseNameSections()</code> walks the four strings to measure their total byte length, which is needed to find where the last team's block ends (since there's no next pointer to bound it). <code>buildNameSection()</code> encodes a string back to this format for import.</p>
+
+      <div class="callout">
+        <p><strong>Team names are only written during import</strong> when the XLSX contains the optional <code>Team City</code>, <code>Team Name</code>, and <code>Arena</code> columns. If those columns are absent, only ratings are patched and the existing name strings are left untouched.</p>
+      </div>
+    </section>
+
+    <!-- ═══ OVERALL ARRAY ═══ -->
+    <section id="overall-array">
+      <h2>Team Overall Ratings</h2>
+
+      <p>Team overall ratings (0–99) live in a flat array completely separate from the team blocks. One byte per team, in the same order as the pointer table.</p>
+
+      <div class="chips">
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">OVERALL_BASE</span><span class="chip-line">L:343</span></span>
+      </div>
+
+      <table class="vtable">
+        <tr><th>ROM type</th><th>Array offset</th><th>Access</th></tr>
+        <tr><td>30-team</td><td>1,952,292</td><td><code>data[OVERALL_BASE[30] + i]</code></td></tr>
+        <tr><td>32-team</td><td>2,003,636</td><td><code>data[OVERALL_BASE[32] + i]</code></td></tr>
+      </table>
+
+      <p>On export, this byte is read as the <code>Overall</code> column. On import, it is written back as a direct byte assignment. The 30/32 toggle sets the global <code>nTeams</code> variable, which selects the right constant.</p>
+    </section>
+
+    <!-- ═══ XLSX FORMAT — TEAM ═══ -->
+    <section id="xlsx-team">
+      <h2>XLSX Format: Team Data Sheet</h2>
+
+      <p>The XLSX file exported by this tool contains two sheets. The <strong>Team Data</strong> sheet has one row per team, in pointer-table order.</p>
+
+      <table class="vtable">
+        <tr><th>Column</th><th>Type / Range</th><th>Notes</th></tr>
+        <tr><td>Team City</td><td>string</td><td>Optional — presence of the Arena column triggers name write on import</td></tr>
+        <tr><td>Abv</td><td>2–3 alphanumeric</td><td>Required; must be unique across all teams (case-insensitive)</td></tr>
+        <tr><td>Team Name</td><td>string</td><td>Optional — required only if Team City is present</td></tr>
+        <tr><td>Arena</td><td>string</td><td>Optional — triggers name write mode when present</td></tr>
+        <tr><td>Overall</td><td>integer 0–99</td><td>Written to OVERALL_BASE array</td></tr>
+        <tr><td>Offense</td><td>integer 0–7</td><td>Packed in byte 76, high nibble</td></tr>
+        <tr><td>Defense</td><td>integer 0–7</td><td>Packed in byte 76, low nibble</td></tr>
+        <tr><td>PK</td><td>integer 0–2</td><td>Packed in byte 77, high nibble</td></tr>
+        <tr><td>PP</td><td>integer 0–2</td><td>Packed in byte 77, low nibble</td></tr>
+        <tr><td>Home</td><td>integer 0–2</td><td>Packed in byte 78, high nibble</td></tr>
+        <tr><td>Road</td><td>integer 0–3</td><td>Packed in byte 78, low nibble</td></tr>
+      </table>
+
+      <p>The row count must equal the current <code>nTeams</code> setting (30 or 32). Teams must appear in the same order as Player Data — the <code>Abv</code> columns of both sheets must match exactly, position for position.</p>
+    </section>
+
+    <!-- ═══ XLSX FORMAT — PLAYER ═══ -->
+    <section id="xlsx-player">
+      <h2>XLSX Format: Player Data Sheet</h2>
+
+      <p>The <strong>Player Data</strong> sheet has one row per player. All players for a team appear together, in position order: goalies first, then forwards, then defense. The team boundary is determined by the <code>Abv</code> column.</p>
+
+      <table class="vtable">
+        <tr><th>Column</th><th>Type / Range</th><th>Notes</th></tr>
+        <tr><td>First</td><td>string</td><td>Letters, periods, apostrophes, hyphens only</td></tr>
+        <tr><td>Last</td><td>string</td><td>Same character set. First + " " + Last ≤ 20 chars total</td></tr>
+        <tr><td>Abv</td><td>string</td><td>Must match a team in Team Data; must not be blank</td></tr>
+        <tr><td>Pos</td><td>G / F / D</td><td>Goalies must precede forwards; forwards must precede defense per team</td></tr>
+        <tr><td>JNo</td><td>hex 00–FF</td><td>1–2 hex digits, e.g. "0A", "17"</td></tr>
+        <tr><td>Ovr</td><td>integer 0–99</td><td>Computed on export; must not be blank; not written back to ROM on import</td></tr>
+        <tr><td>Wgt</td><td>integer 0–15</td><td>4-bit field (high nibble of byte 0)</td></tr>
+        <tr><td>Agl</td><td>integer 0–6</td><td>Low nibble of byte 0</td></tr>
+        <tr><td>Spd</td><td>integer 0–6</td><td>High nibble of byte 1</td></tr>
+        <tr><td>OfA</td><td>integer 0–6</td><td>Low nibble of byte 1</td></tr>
+        <tr><td>DfA</td><td>integer 0–6</td><td>High nibble of byte 2</td></tr>
+        <tr><td>ShP-PkC</td><td>integer 0–6</td><td>Low nibble of byte 2</td></tr>
+        <tr><td>Chk</td><td>integer 0–6</td><td>High nibble of byte 3. Must be 0 for goalies (Pos G)</td></tr>
+        <tr><td>Hnd</td><td>integer 0–15</td><td>4-bit field (low nibble of byte 3)</td></tr>
+        <tr><td>StH</td><td>integer 0–6</td><td>High nibble of byte 4. Must be 0 for goalies</td></tr>
+        <tr><td>ShA</td><td>integer 0–6</td><td>Low nibble of byte 4. Must be 0 for goalies</td></tr>
+        <tr><td>End-StR</td><td>integer 0–6</td><td>High nibble of byte 5</td></tr>
+        <tr><td>Rgh-StL</td><td>integer 0–6</td><td>Low nibble of byte 5</td></tr>
+        <tr><td>Pas-GlR</td><td>integer 0–6</td><td>High nibble of byte 6</td></tr>
+        <tr><td>Agr-GlL</td><td>integer 0–6</td><td>Low nibble of byte 6</td></tr>
+      </table>
+
+      <div class="callout red">
+        <p><strong>Ovr is export-only.</strong> It is computed from the attribute nibbles and never read back on import. Editing it has no effect on the ROM.</p>
+      </div>
+    </section>
+
+    <!-- ═══ ATTR NIBBLES ═══ -->
+    <section id="attr-nibbles">
+      <h2>Attribute Nibble Layout</h2>
+
+      <p>Seven bytes follow the jersey number in each player record. Each byte holds two 4-bit attribute values. High nibble = bits 7–4; low nibble = bits 3–0.</p>
+
+      <div class="nibble-grid">
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 0</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">Wgt<small>0–15</small></div>
+            <div class="nibble-half nh-lo">Agl<small>0–6</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 1</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">Spd<small>0–6</small></div>
+            <div class="nibble-half nh-lo">OfA<small>0–6</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 2</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">DfA<small>0–6</small></div>
+            <div class="nibble-half nh-lo">ShP-PkC<small>0–6</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 3</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">Chk<small>0–6</small></div>
+            <div class="nibble-half nh-lo">Hnd<small>0–15</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 4</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">StH<small>0–6</small></div>
+            <div class="nibble-half nh-lo">ShA<small>0–6</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 5</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">End-StR<small>0–6</small></div>
+            <div class="nibble-half nh-lo">Rgh-StL<small>0–6</small></div>
+          </div>
+        </div>
+        <div class="nibble-byte">
+          <div class="nibble-byte-label">byte 6</div>
+          <div class="nibble-halves">
+            <div class="nibble-half nh-hi">Pas-GlR<small>0–6</small></div>
+            <div class="nibble-half nh-lo">Agr-GlL<small>0–6</small></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chips">
+        <span class="chip export"><span class="chip-cat">export</span><span class="chip-fn">exportPlayers() — att[] decode</span><span class="chip-line">L:393</span></span>
+        <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">buildAttrNibbles(p)</span><span class="chip-line">L:409</span></span>
+      </div>
+
+      <p>On export, each byte is decoded as <code>(byte &gt;&gt; 4) &amp; 0xF</code> (high) and <code>byte &amp; 0xF</code> (low), producing the 14-element <code>att[]</code> array. On import, <code>buildAttrNibbles()</code> assembles the 14 nibble values into a 14-character hex string, then pairs them with <code>parseInt(attr.slice(b*2, b*2+2), 16)</code> for each byte.</p>
+
+      <p>The double-width fields (<code>Wgt</code> and <code>Hnd</code>, 0–15) use <code>parseInt(v).toString(16)</code> to produce a single hex digit. All other attributes (0–6) are stored as their decimal value directly as a hex character.</p>
+    </section>
+
+    <!-- ═══ EXPORT FLOW ═══ -->
+    <section id="export-flow">
+      <h2>Export Flow: ROM to XLSX</h2>
+
+      <p>Export is read-only. Dropping a <code>.bin</code> file triggers team count detection, then reads all team and player data, and hands them to SheetJS to write a multi-sheet <code>.xlsx</code> file. All processing runs in-browser; no files are uploaded.</p>
+
+      <div class="chips">
+        <span class="chip export"><span class="chip-cat">export</span><span class="chip-fn">exportTeams(data)</span><span class="chip-line">L:499</span></span>
+        <span class="chip export"><span class="chip-cat">export</span><span class="chip-fn">exportPlayers(data)</span><span class="chip-line">L:383</span></span>
+        <span class="chip util"><span class="chip-cat">util</span><span class="chip-fn">XLSX.writeFile()</span><span class="chip-line">L:672</span></span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">File type check</div>
+            <div class="step-desc">The file extension is checked with <code>/\.bin$/i</code>. Non-bin files are rejected immediately.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Team count check</div>
+            <div class="step-desc"><code>detectTeamCount()</code> is called on the loaded ROM. If the detected count conflicts with the toggle setting, an error is shown and nothing is written.
+            <div class="chips"><span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">detectTeamCount(data)</span><span class="chip-line">L:640</span></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Read team data</div>
+            <div class="step-desc"><code>exportTeams()</code> walks the pointer table, reads bytes 76–78 for ratings, looks up <code>OVERALL_BASE[nTeams] + i</code> for the overall, and calls <code>readTeamName()</code> for the name strings. Returns one object per team.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Read player data</div>
+            <div class="step-desc"><code>exportPlayers()</code> walks every team's player list, decodes the name, jersey number, 7 attribute bytes, and position from the record structure. Computes <code>Ovr</code> from the attributes using a formula that differs between goalies and skaters. Returns one object per player.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Write XLSX</div>
+            <div class="step-desc">SheetJS converts the two arrays to worksheets and writes a <code>.xlsx</code> file named <code>{romStem}_rosterData.xlsx</code>. The browser triggers a download.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TEAM COUNT DETECTION ═══ -->
+    <section id="team-count-detect">
+      <h2>Team Count Detection</h2>
+
+      <p>ROMs come in 30-team and 32-team variants. The tool auto-detects which by reading the pointer table heuristically, without a file-size check.</p>
+
+      <div class="chips">
+        <span class="chip read"><span class="chip-cat">read</span><span class="chip-fn">detectTeamCount(data)</span><span class="chip-line">L:640</span></span>
+      </div>
+
+      <p><code>detectTeamCount()</code> reads 34 potential pointers starting at offset 782 and counts how many consecutive ones satisfy two conditions: each pointer is greater than the previous (ascending), and each pointer is within the file's bounds. It maps the count to a ROM type:</p>
+
+      <table class="vtable">
+        <tr><th>Valid pointer run</th><th>Detected type</th></tr>
+        <tr><td>≥ 32 consecutive valid pointers</td><td>32-team ROM</td></tr>
+        <tr><td>≥ 30 consecutive valid pointers</td><td>30-team ROM</td></tr>
+        <tr><td>fewer than 30</td><td><code>null</code> — unrecognized</td></tr>
+      </table>
+
+      <p>If the detected count conflicts with the toggle, the operation is blocked with an error. If detection returns <code>null</code>, the operation proceeds using the toggle value as-is.</p>
+    </section>
+
+    <!-- ═══ IMPORT UPLOAD / VALIDATION ═══ -->
+    <section id="import-upload">
+      <h2>Import: Upload and Validation Phase</h2>
+
+      <p>Dropping an <code>.xlsx</code> file triggers validation immediately, before the user clicks "Import to ROM". All checks run in the browser against the spreadsheet alone; no ROM is needed at this stage.</p>
+
+      <div class="chips">
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">checkNoGaps(rows, sheet)</span><span class="chip-line">L:678</span></span>
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validateTeamRows(rows)</span><span class="chip-line">L:689</span></span>
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validatePlayerRows(rows)</span><span class="chip-line">L:720</span></span>
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validateAbvSync(teams, players)</span><span class="chip-line">L:765</span></span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">File type check</div>
+            <div class="step-desc">Extension must be <code>.xlsx</code>. Non-xlsx files are rejected immediately.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">SheetJS parse and sheet presence</div>
+            <div class="step-desc">SheetJS reads the file buffer. Both <code>Team Data</code> and <code>Player Data</code> sheet names must be present. Missing sheets produce an error before any row parsing.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Blank row gap check</div>
+            <div class="step-desc"><code>checkNoGaps()</code> runs on the raw (unfiltered) rows of each sheet. It finds the first and last non-empty rows, then checks that no blank row exists between them. This runs before the empty-row filter so gaps are never silently swallowed.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Filter trailing empty rows</div>
+            <div class="step-desc">After the gap check, rows where every column is empty or whitespace are filtered out. This handles trailing blank rows that Excel adds.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Team Data validation</div>
+            <div class="step-desc"><code>validateTeamRows()</code> checks row count, all rating ranges, Abv format and uniqueness, and (when name columns are present) that name strings are non-empty and contain only valid characters. Errors are grouped by column in a <code>Map</code>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">6</div>
+          <div class="step-body">
+            <div class="step-title">Player Data validation</div>
+            <div class="step-desc"><code>validatePlayerRows()</code> checks required columns, attribute value ranges, name characters and length, JNo hex format, Pos values, Ovr not blank, goalie stat zero rule, and per-team roster counts and position ordering. Also checks that the number of distinct teams in the player sheet matches <code>nTeams</code>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">7</div>
+          <div class="step-body">
+            <div class="step-title">Cross-sheet Abv sync</div>
+            <div class="step-desc"><code>validateAbvSync()</code> confirms that the same set of abbreviations exists in both sheets and that their order matches position-for-position. Both a missing abbreviation and an order mismatch are fatal errors.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ IMPORT WRITE ═══ -->
+    <section id="import-write">
+      <h2>Import: ROM Write Phase</h2>
+
+      <p>After the XLSX passes all validation, clicking "Import to ROM" opens a second file picker for the base ROM. The tool writes both sheets into that ROM and triggers a download of the modified binary.</p>
+
+      <div class="chips">
+        <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">importTeams(romBuf, rows)</span><span class="chip-line">L:509</span></span>
+        <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">importPlayers(romBuf, rows)</span><span class="chip-line">L:416</span></span>
+        <span class="chip util"><span class="chip-cat">util</span><span class="chip-fn">dlBin(u8, name)</span><span class="chip-line">L:556</span></span>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">ROM team count check</div>
+            <div class="step-desc"><code>detectTeamCount()</code> is called on the chosen ROM. If it conflicts with the toggle, an error is shown and no write occurs.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">Import teams</div>
+            <div class="step-desc"><code>importTeams()</code> includes internal range validation on the rows as a safeguard. When name columns are absent, it patches ratings and the overall byte in-place. When name columns are present, it rebuilds all four name strings within the existing block boundaries, repositioning <code>plOff</code> and <code>tmOff</code> to fit without changing the pointer table or ROM size. Recalculates the checksum and returns the modified <code>Uint8Array</code>.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Import players</div>
+            <div class="step-desc"><code>importPlayers()</code> receives the output of step 2 as its input. It fully rebuilds all team blocks: recalculates space allocation, rewrites player records, preserves name strings, updates pointer offsets, and recalculates the checksum.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Download</div>
+            <div class="step-desc"><code>dlBin()</code> creates a <code>Blob</code> from the final <code>Uint8Array</code> and triggers a download named <code>{romStem}_modified.bin</code>.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ SPACE CALCULATION ═══ -->
+    <section id="space-calc">
+      <h2>Player Block Space Calculation</h2>
+
+      <p><code>importPlayers()</code> cannot simply append data. Each team block must fit within space defined by consecutive pointer offsets, because other game data lives immediately after the last block. The tool redistributes the existing total player-area space evenly across teams.</p>
+
+      <div class="chips">
+        <span class="chip import"><span class="chip-cat">import</span><span class="chip-fn">importPlayers() — space calc</span><span class="chip-line">L:453</span></span>
+      </div>
+
+      <p>The algorithm:</p>
+      <ol style="margin: 12px 0 12px 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.75; color: var(--text); max-width: 640px;">
+        <li>Read the existing <code>tmOff</code> for every team. The player area for each team is <code>tmOff − 146</code> bytes.</li>
+        <li>Sum all player areas to get <code>totalSpace</code>. Compute <code>baseEven</code> as the largest even number ≤ <code>totalSpace / nTeams</code>.</li>
+        <li>Compute leftover bytes: <code>extra = totalSpace − baseEven × nTeams</code>. The last <code>extra / 2</code> teams get <code>baseEven + 2</code> bytes; the rest get <code>baseEven</code>.</li>
+        <li>Before writing, verify that each team's actual player bytes + 2 (the <code>0x00 0x02</code> sentinel) fit in the allocated space. If not, an error is thrown.</li>
+        <li>Within each block, bytes between the 146-byte header and <code>plOff</code> are filled with <code>0xFF</code>. Player records are written from <code>plOff</code>. The existing name string bytes are copied verbatim to <code>tmOff</code>.</li>
+      </ol>
+
+      <p>The pre/post data around the entire team block area is preserved unchanged. The pointer table at offset 782 is patched to reflect the new block positions before the checksum is recalculated.</p>
+
+      <div class="callout">
+        <p><strong>32-team ROMs</strong> use <code>BLOCK_AREA_END[32] = 2030418</code> as a hard boundary for the last team's block. 30-team ROMs derive the boundary by measuring the last team's name strings with <code>parseNameSections()</code>.</p>
+      </div>
+    </section>
+
+    <!-- ═══ CHECKSUM ═══ -->
+    <section id="checksum">
+      <h2>Checksum</h2>
+
+      <p>Genesis ROMs include a 16-bit checksum at bytes <code>0x18E–0x18F</code>. Both <code>importTeams()</code> and <code>importPlayers()</code> recalculate it after writing. The algorithm sums every big-endian u16 starting at <code>0x200</code> and wraps at 16 bits:</p>
+
+      <div class="chips">
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">importTeams() — checksum</span><span class="chip-line">L:540</span></span>
+        <span class="chip write"><span class="chip-cat">write</span><span class="chip-fn">importPlayers() — checksum</span><span class="chip-line">L:492</span></span>
+      </div>
+
+      <p>The loop: <code>for (i = 0x200; i+1 &lt; rom.length; i += 2) ck = (ck + (rom[i] &lt;&lt; 8) + rom[i+1]) &amp; 0xFFFF</code>. The result is split into two bytes and written to <code>rom[0x18E]</code> and <code>rom[0x18F]</code>. Without a valid checksum, many emulators and flashcarts refuse to boot the ROM.</p>
+    </section>
+
+    <!-- ═══ VALIDATION — TEAM ═══ -->
+    <section id="val-team">
+      <h2>Validation Rules: Team Data</h2>
+
+      <p>All team validation happens in <code>validateTeamRows()</code> at upload time. Errors are grouped by column name in a <code>Map</code>.</p>
+
+      <div class="chips">
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validateTeamRows(rows)</span><span class="chip-line">L:689</span></span>
+      </div>
+
+      <table class="vtable">
+        <tr><th>Check</th><th>Rule</th></tr>
+        <tr><td>Row count</td><td>Must equal nTeams (30 or 32 per toggle)</td></tr>
+        <tr><td>Abv</td><td>Not blank; 2–3 alphanumeric characters; no duplicates (case-insensitive). Always checked.</td></tr>
+        <tr><td>Overall</td><td>Integer 0–99</td></tr>
+        <tr><td>Offense</td><td>Integer 0–7</td></tr>
+        <tr><td>Defense</td><td>Integer 0–7</td></tr>
+        <tr><td>PK</td><td>Integer 0–2</td></tr>
+        <tr><td>PP</td><td>Integer 0–2</td></tr>
+        <tr><td>Home</td><td>Integer 0–2</td></tr>
+        <tr><td>Road</td><td>Integer 0–3</td></tr>
+        <tr><td>Team City, Team Name, Arena</td><td>Only checked when the Arena column is present. Must not be blank; must match <code>/^[A-Za-z0-9 .'\-]+$/</code> (letters, numbers, spaces, periods, apostrophes, hyphens).</td></tr>
+        <tr><td>Blank row gaps</td><td>No blank rows between the first and last data row (checked by checkNoGaps before filter)</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ VALIDATION — PLAYER ═══ -->
+    <section id="val-player">
+      <h2>Validation Rules: Player Data</h2>
+
+      <p><code>validatePlayerRows()</code> runs in two passes: first all per-row field checks (grouped into the <code>errs</code> Map by column), then per-team roster structure checks.</p>
+
+      <div class="chips">
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validatePlayerRows(rows)</span><span class="chip-line">L:720</span></span>
+      </div>
+
+      <h3>Required columns</h3>
+      <p>All 20 columns must be present in the sheet header: <code>First, Last, Abv, Pos, JNo, Ovr, Wgt, Agl, Spd, OfA, DfA, ShP-PkC, Chk, Hnd, StH, ShA, End-StR, Rgh-StL, Pas-GlR, Agr-GlL</code>. Missing columns are reported before row scanning begins.</p>
+
+      <h3>Per-row field rules</h3>
+      <table class="vtable" style="table-layout:fixed">
+        <colgroup><col style="width:50%"><col style="width:50%"></colgroup>
+        <tr><th>Field</th><th>Rule</th></tr>
+        <tr><td>Abv</td><td>Must not be blank</td></tr>
+        <tr><td>Ovr</td><td>Must not be blank</td></tr>
+        <tr><td>Pos</td><td>Must be exactly G, F, or D</td></tr>
+        <tr><td>First, Last</td><td>Letters, periods, apostrophes, hyphens only (<code>/^[A-Za-z.'\-]*$/</code>). Combined "First Last" length ≤ 20 chars.</td></tr>
+        <tr><td>JNo</td><td>1–2 hex digits (case-insensitive), e.g. "0A", "17"</td></tr>
+        <tr><td>Wgt, Hnd</td><td>Integer 0–15</td></tr>
+        <tr><td>Agl, Spd, OfA, DfA, ShP-PkC, Chk, StH, ShA, End-StR, Rgh-StL, Pas-GlR, Agr-GlL</td><td>Integer 0–6</td></tr>
+        <tr><td>Chk, StH, ShA (Pos G only)</td><td>Must be 0. Hnd is unrestricted for goalies.</td></tr>
+      </table>
+
+      <h3>Per-team roster rules</h3>
+      <table class="vtable">
+        <tr><th>Rule</th><th>Detail</th></tr>
+        <tr><td>Distinct team count</td><td>Must equal nTeams — same 30/32 requirement as Team Data</td></tr>
+        <tr><td>Position ordering</td><td>Goalies before forwards before defense within each team's group</td></tr>
+        <tr><td>Goalie count</td><td>1–4 per team</td></tr>
+        <tr><td>Forward count</td><td>1–15 per team</td></tr>
+        <tr><td>Defense count</td><td>1–15 per team</td></tr>
+        <tr><td>Total roster size</td><td>Max 26 players per team (goalies + forwards + defense)</td></tr>
+        <tr><td>Blank row gaps</td><td>No blank rows between first and last data row in the sheet</td></tr>
+      </table>
+    </section>
+
+    <!-- ═══ VALIDATION — CROSS-SHEET ═══ -->
+    <section id="val-cross">
+      <h2>Validation Rules: Cross-sheet</h2>
+
+      <div class="chips">
+        <span class="chip valid"><span class="chip-cat">validate</span><span class="chip-fn">validateAbvSync(teams, players)</span><span class="chip-line">L:765</span></span>
+      </div>
+
+      <p><code>validateAbvSync()</code> compares the ordered list of abbreviations from Team Data against the ordered list of distinct abbreviations encountered in Player Data (in the order they first appear).</p>
+
+      <table class="vtable">
+        <tr><th>Check</th><th>Rule</th></tr>
+        <tr><td>Set match</td><td>Every Abv in Team Data must exist in Player Data, and vice versa. Missing abbreviations in either direction are reported.</td></tr>
+        <tr><td>Order match</td><td>Position-for-position, the Abv at index <em>i</em> in Team Data must equal the Abv at index <em>i</em> in Player Data. All mismatches are reported (up to 10, then a count of additional).</td></tr>
+      </table>
+    </section>
+
+  </main>
+
+</div>
+
+<footer>NHL '94 Roster Tool: Developer Guide &nbsp;·&nbsp; web/index.html</footer>
+
+<script>
+  const links = document.querySelectorAll('.sidebar-link');
+  const sections = document.querySelectorAll('section[id]');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+      }
+    });
+  }, { rootMargin: '-54px 0px -60% 0px', threshold: 0 });
+  sections.forEach(s => obs.observe(s));
+</script>
+
+</body>
+</html>
