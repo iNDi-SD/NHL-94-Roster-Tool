@@ -1,5 +1,5 @@
 # Everything except the roster tool app
-nhl94/
+nhl94-online/
 mockups/
 extractor/
 fonts/
@@ -33,4 +33,4 @@ __pycache__/
 Thumbs.db
 
 # Local-only web files
-web/guide.html
+roster-tool/web/guide.html

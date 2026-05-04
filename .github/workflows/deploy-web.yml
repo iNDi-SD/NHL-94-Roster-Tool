@@ -3,7 +3,7 @@ name: Deploy Web App
 on:
   push:
     branches: [main]
-    paths: ['web/**']
+    paths: ['roster-tool/web/**']
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web
+          path: roster-tool/web
 
       - id: deployment
         uses: actions/deploy-pages@v4
