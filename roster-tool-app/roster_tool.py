@@ -1,6 +1,13 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-import struct, csv, io, os, sys, re
+from tkinter import filedialog, messagebox, ttk, scrolledtext
+import struct, io, os, sys, re
+
+try:
+    import openpyxl
+except ImportError:
+    messagebox.showerror("Missing dependency",
+        "openpyxl is required.\nInstall with: pip install openpyxl")
+    sys.exit(1)
 
 # ── ROM constants ────────────────────────────────────────────────
 BLOCK_AREA_END = {32: 2030418}
@@ -71,6 +78,16 @@ def recalc_checksum(data):
     data[0x18E] = (ck >> 8) & 0xFF
     data[0x18F] =  ck       & 0xFF
 
+# ── Team count detection ─────────────────────────────────────────
+def detect_team_count(data):
+    ptrs = [u32(data, 782 + i * 4) for i in range(34)]
+    n = 1
+    while n < len(ptrs) and ptrs[n] > ptrs[n-1] and ptrs[n] < len(data):
+        n += 1
+    if n >= 32: return 32
+    if n >= 30: return 30
+    return None
+
 # ── Player export ────────────────────────────────────────────────
 def export_players(raw):
     d, rows = bytes(raw), []
@@ -122,17 +139,17 @@ def build_attr_nibbles(p):
            +str(p['Rgh-StL'])+str(p['Pas-GlR'])+str(p['Agr-GlL']))
 
 def import_players(rom_bytes, player_rows):
-    if not player_rows: raise ValueError('CSV is empty.')
+    if not player_rows: raise ValueError('Player Data sheet is empty.')
     missing = [f for f in P_FIELDS if f not in player_rows[0]]
-    if missing: raise ValueError(f"CSV missing columns: {', '.join(missing)}")
+    if missing: raise ValueError(f"Missing columns: {', '.join(missing)}")
 
     for ri, p in enumerate(player_rows):
         lbl = f'Row {ri+1}'
         if p['Pos'] not in ('G','F','D'):
             raise ValueError(f"{lbl}: Pos must be G, F, or D")
         first, last = str(p.get('First','')), str(p.get('Last',''))
-        if len(first)+1+len(last) > 18:
-            raise ValueError(f"{lbl}: \"{first} {last}\" is {len(first)+1+len(last)} chars — max 18")
+        if len(first)+1+len(last) > 20:
+            raise ValueError(f"{lbl}: \"{first} {last}\" is {len(first)+1+len(last)} chars — max 20")
         if not NAME_RE.match(first): raise ValueError(f"{lbl}: First \"{first}\" has invalid characters")
         if not NAME_RE.match(last):  raise ValueError(f"{lbl}: Last \"{last}\" has invalid characters")
         if not re.match(r'^[0-9a-fA-F]{1,2}$', str(p['JNo'])):
@@ -148,7 +165,7 @@ def import_players(rom_bytes, player_rows):
         if abv not in team_map: team_map[abv]=[]; abv_order.append(abv)
         team_map[abv].append(row)
     if len(abv_order) != n_teams:
-        raise ValueError(f"CSV has {len(abv_order)} teams — expected {n_teams}.")
+        raise ValueError(f"Player Data has {len(abv_order)} teams — expected {n_teams}.")
 
     team_info = []
     for abv in abv_order:
@@ -190,7 +207,7 @@ def import_players(rom_bytes, player_rows):
     name_data = []
     for i,ptr in enumerate(ptrs):
         ns = ptr + tm_offs[i]
-        if i < n_teams-1:       name_data.append(bytes(data[ns:ptrs[i+1]]))
+        if i < n_teams-1:          name_data.append(bytes(data[ns:ptrs[i+1]]))
         elif area_end is not None: name_data.append(bytes(data[ns:area_end]))
         else:
             sz = parse_name_sections(db, ns)
@@ -260,35 +277,14 @@ def export_teams(raw):
 # ── Team import ──────────────────────────────────────────────────
 def import_teams(rom_bytes, rows):
     if len(rows)!=n_teams:
-        raise ValueError(f"CSV has {len(rows)} rows — expected {n_teams}.")
-    for i,row in enumerate(rows):
-        lbl=f'Row {i+1}'
-        if not (0<=int(row['Overall'])<=99): raise ValueError(f"{lbl}: Overall must be 0–99")
-        if not (0<=int(row['Offense'])<=7) or not (0<=int(row['Defense'])<=7):
-            raise ValueError(f"{lbl}: Offense/Defense must be 0–7")
-        if not (0<=int(row['PK'])<=2) or not (0<=int(row['PP'])<=2):
-            raise ValueError(f"{lbl}: PK/PP must be 0–2")
-        if not (0<=int(row['Home'])<=2): raise ValueError(f"{lbl}: Home must be 0–2")
-        if not (0<=int(row['Road'])<=3): raise ValueError(f"{lbl}: Road must be 0–3")
+        raise ValueError(f"Team Data has {len(rows)} rows — expected {n_teams}.")
 
-    has_names = 'Arena' in rows[0]
-    if has_names:
-        seen=set()
-        for i,row in enumerate(rows):
-            lbl=f'Row {i+1}'
-            for f in ('Team City','Team Name','Arena'):
-                if not row.get(f,'').strip(): raise ValueError(f"{lbl}: {f} must not be empty")
-            abv=row.get('Abv','').strip()
-            if not re.match(r'^[A-Za-z0-9]{2,3}$', abv):
-                raise ValueError(f"{lbl}: Abv must be 2–3 letters/numbers")
-            if abv.upper() in seen: raise ValueError(f"{lbl}: Abv \"{abv}\" is a duplicate")
-            seen.add(abv.upper())
-
+    has_names = bool(rows[0].get('Arena','').strip()) if rows else False
     data = bytearray(rom_bytes)
     db   = bytes(data)
     ptrs = tm_ptrs(db)
-    tm_offs  = [u16(db, p+4) for p in ptrs]
-    old_pl_offs = [u16(db, p) for p in ptrs]
+    tm_offs     = [u16(db, p+4) for p in ptrs]
+    old_pl_offs = [u16(db, p)   for p in ptrs]
 
     if not has_names:
         for i,row in enumerate(rows):
@@ -309,17 +305,17 @@ def import_teams(rom_bytes, rows):
     new_names = []
     for row in rows:
         new_names.append(b''.join([
-            build_name_section(row['Team City'].strip()),
-            build_name_section(row['Abv'].strip()),
-            build_name_section(row['Team Name'].strip()),
-            build_name_section(row['Arena'].strip()),
+            build_name_section(str(row['Team City']).strip()),
+            build_name_section(str(row['Abv']).strip()),
+            build_name_section(str(row['Team Name']).strip()),
+            build_name_section(str(row['Arena']).strip()),
         ]))
 
     for i,row in enumerate(rows):
         pb  = tm_offs[i] - old_pl_offs[i]
         nfr = block_sizes[i] - 146 - pb - len(new_names[i])
         if nfr < 0:
-            raise ValueError(f"Row {i+1} ({row.get('Abv','').strip()}): names are {-nfr} bytes too large")
+            raise ValueError(f"Row {i+1} ({str(row.get('Abv','')).strip()}): names are {-nfr} bytes too large")
 
     for i,row in enumerate(rows):
         ptr    = ptrs[i]
@@ -346,30 +342,215 @@ def import_teams(rom_bytes, rows):
     recalc_checksum(data)
     return bytes(data)
 
-# ── CSV helpers ──────────────────────────────────────────────────
-def rows_to_csv(rows):
-    out = io.StringIO()
-    w = csv.DictWriter(out, fieldnames=list(rows[0].keys()), lineterminator='\r\n')
-    w.writeheader(); w.writerows(rows)
-    return out.getvalue()
+# ── XLSX helpers ─────────────────────────────────────────────────
+def xlsx_to_rows(path):
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    missing = [s for s in ('Team Data', 'Player Data') if s not in wb.sheetnames]
+    if missing:
+        wb.close()
+        raise ValueError(f"Missing sheet{'s' if len(missing)>1 else ''}: {', '.join(missing)}")
 
-def csv_to_rows(text):
-    r = csv.DictReader(io.StringIO(text))
-    return [row for row in r if any(v.strip() for v in row.values())]
+    def sheet_to_rows(ws):
+        rows_iter = ws.iter_rows(values_only=True)
+        try:
+            header_row = next(rows_iter)
+        except StopIteration:
+            return []
+        headers = [str(h) if h is not None else '' for h in header_row]
+        result = []
+        for row in rows_iter:
+            d = {}
+            for i, h in enumerate(headers):
+                v = row[i] if i < len(row) else None
+                d[h] = '' if v is None else str(v).strip()
+            result.append(d)
+        return result
 
-# ── Button style (set up once on first App init) ─────────────────
+    team_rows   = sheet_to_rows(wb['Team Data'])
+    player_rows = sheet_to_rows(wb['Player Data'])
+    wb.close()
+    return team_rows, player_rows
+
+def rows_to_xlsx(path, team_rows, player_rows):
+    wb = openpyxl.Workbook()
+    ws1 = wb.active
+    ws1.title = 'Team Data'
+    if team_rows:
+        ws1.append(list(team_rows[0].keys()))
+        for row in team_rows:
+            ws1.append(list(row.values()))
+    ws2 = wb.create_sheet('Player Data')
+    if player_rows:
+        ws2.append(list(player_rows[0].keys()))
+        for row in player_rows:
+            ws2.append(list(row.values()))
+    wb.save(path)
+
+# ── Validation helpers ───────────────────────────────────────────
+def check_no_gaps(rows, sheet_name):
+    def not_empty(row): return any(str(v).strip() for v in row.values())
+    first = last = -1
+    for i, row in enumerate(rows):
+        if not_empty(row):
+            if first == -1: first = i
+            last = i
+    if first == -1: return []
+    return [f'Row {i+1}' for i in range(first+1, last) if not not_empty(rows[i])]
+
+def validate_team_rows(rows):
+    if len(rows) != n_teams:
+        raise ValueError(f"Team Data has {len(rows)} rows — expected {n_teams}.")
+    NAME_RE_T = re.compile(r"^[A-Za-z0-9 .'\-]+$")
+    errors = {}
+    def e(col, msg): errors.setdefault(col, []).append(msg)
+    has_names = bool(rows[0].get('Arena','').strip()) if rows else False
+    seen = set()
+    for i, row in enumerate(rows):
+        abv = str(row.get('Abv','') or '').strip()
+        lbl = f'Row {i+1}' + (f' ({abv})' if abv else '')
+        for field, lo, hi in [('Overall',0,99),('Offense',0,7),('Defense',0,7),
+                               ('PK',0,2),('PP',0,2),('Home',0,2),('Road',0,3)]:
+            raw = str(row.get(field,'') or '')
+            try:
+                v = int(raw)
+                if not (lo <= v <= hi): e(field, f'{lbl}: {raw} out of range ({lo}–{hi})')
+            except ValueError:
+                e(field, f'{lbl}: "{raw}" is not a valid number (expected {lo}–{hi})')
+        if not abv:
+            e('Abv', f'{lbl}: Abv is blank')
+        elif not re.match(r'^[A-Za-z0-9]{2,3}$', abv):
+            e('Abv', f'{lbl}: "{abv}" must be 2–3 letters/numbers')
+        else:
+            a = abv.upper()
+            if a in seen: e('Abv', f'{lbl}: "{abv}" is a duplicate')
+            seen.add(a)
+        if has_names:
+            for f in ('Team City','Team Name','Arena'):
+                v = str(row.get(f,'') or '').strip()
+                if not v: e(f, f'{lbl}: must not be empty')
+                elif not NAME_RE_T.match(v): e(f, f'{lbl}: "{v}" contains invalid characters')
+    return errors
+
+def validate_player_rows(rows):
+    NF_V = ['Agl','Spd','OfA','DfA','ShP-PkC','Chk','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL']
+    NAME_RE_V = re.compile(r"^[A-Za-z.'\-]*$")
+    if not rows: raise ValueError('Player Data sheet is empty.')
+    missing = [f for f in P_FIELDS if f not in rows[0]]
+    if missing: raise ValueError(f"Missing columns: {', '.join(missing)}")
+    errors = {}
+    def e(col, msg): errors.setdefault(col, []).append(msg)
+    for ri, p in enumerate(rows):
+        first = str(p.get('First','') or '')
+        last  = str(p.get('Last', '') or '')
+        name_str = ' '.join(filter(None, [first, last]))
+        lbl = f'Row {ri+1}' + (f' ({name_str})' if name_str else '')
+        if not str(p.get('Abv','')).strip():
+            e('Abv', f'{lbl}: Abv is blank')
+        if str(p.get('Ovr','')).strip() == '':
+            e('Ovr', f'{lbl}: Ovr is blank')
+        pos = str(p.get('Pos','') or '')
+        if pos not in ('G','F','D'):
+            e('Pos', f'{lbl}: "{pos}" must be G, F, or D')
+        name_len = len(first) + 1 + len(last)
+        if name_len > 20:
+            e('Name', f'{lbl}: {name_len} chars — max 20')
+        if not NAME_RE_V.match(first): e('First', f'{lbl}: "{first}" has invalid characters')
+        if not NAME_RE_V.match(last):  e('Last',  f'{lbl}: "{last}" has invalid characters')
+        jno = str(p.get('JNo','') or '')
+        if not re.match(r'^[0-9a-fA-F]{1,2}$', jno):
+            e('JNo', f'{lbl}: "{jno}" must be hex 00–FF')
+        for f in ('Wgt','Hnd'):
+            raw = str(p.get(f,'') or '')
+            try:
+                v = int(raw)
+                if not (0 <= v <= 15): e(f, f'{lbl}: "{raw}" must be 0–15')
+            except ValueError:
+                e(f, f'{lbl}: "{raw}" is not a valid number (expected 0–15)')
+        for f in NF_V:
+            raw = str(p.get(f,'') or '')
+            try:
+                v = int(raw)
+                if not (0 <= v <= 6): e(f, f'{lbl}: "{raw}" must be 0–6')
+            except ValueError:
+                e(f, f'{lbl}: "{raw}" is not a valid number (expected 0–6)')
+        if pos == 'G':
+            for f in ('Chk','StH','ShA'):
+                raw = str(p.get(f,'') or '')
+                try:
+                    v = int(raw)
+                    if v != 0: e('Goalie Stats', f'{lbl}: "{f}" must be 0 for goalies (found {raw})')
+                except ValueError:
+                    pass
+    if errors:
+        return errors
+    # Team grouping checks — only run if per-row values are valid
+    abv_order, team_map = [], {}
+    for row in rows:
+        abv = str(row.get('Abv','') or '').strip()
+        if abv not in team_map: team_map[abv]=[]; abv_order.append(abv)
+        team_map[abv].append(row)
+    if len(abv_order) != n_teams:
+        raise ValueError(f"Player Data has {len(abv_order)} teams — expected {n_teams}.")
+    for abv in abv_order:
+        players = team_map[abv]
+        ng = nf = nd = phase = 0
+        for p in players:
+            pos = str(p.get('Pos','') or '')
+            if pos == 'G':
+                if phase > 0: e('Position Order', f'{abv}: goalies must come before forwards and defense')
+                ng += 1
+            elif pos == 'F':
+                if phase > 1: e('Position Order', f'{abv}: forwards must come before defense')
+                phase = 1; nf += 1
+            else:
+                phase = 2; nd += 1
+        if not (1<=ng<=4):  e('Roster Counts', f'{abv}: goalies must be 1–4 (found {ng})')
+        if not (1<=nf<=15): e('Roster Counts', f'{abv}: forwards must be 1–15 (found {nf})')
+        if not (1<=nd<=15): e('Roster Counts', f'{abv}: defense must be 1–15 (found {nd})')
+        if ng+nf+nd > 26:   e('Roster Counts', f'{abv}: max 26 players per team (found {ng+nf+nd})')
+    return errors
+
+def validate_abv_sync(team_rows, player_rows):
+    team_abvs = [str(r.get('Abv','') or '').strip() for r in team_rows]
+    seen = set()
+    player_abv_order = []
+    for row in player_rows:
+        abv = str(row.get('Abv','') or '').strip()
+        if abv not in seen:
+            seen.add(abv)
+            player_abv_order.append(abv)
+    team_set, player_set = set(team_abvs), set(player_abv_order)
+    only_in_team   = [a for a in team_abvs       if a not in player_set]
+    only_in_player = [a for a in player_abv_order if a not in team_set]
+    errors = {}
+    if only_in_team or only_in_player:
+        msgs = []
+        for a in only_in_team:   msgs.append(f'"{a}" — in Team Data but missing from Player Data')
+        for a in only_in_player: msgs.append(f'"{a}" — in Player Data but missing from Team Data')
+        errors['Abv'] = msgs
+        return errors
+    order_errors = []
+    for i in range(len(team_abvs)):
+        t = team_abvs[i]       if i < len(team_abvs)        else '(none)'
+        p = player_abv_order[i] if i < len(player_abv_order) else '(none)'
+        if t != p: order_errors.append(f'Position {i+1}: Team Data has "{t}", Player Data has "{p}"')
+    if order_errors:
+        shown = order_errors[:10]
+        if len(order_errors) > 10: shown.append(f'…and {len(order_errors)-10} more')
+        errors['Abv Order'] = shown
+    return errors
+
+# ── Button style ─────────────────────────────────────────────────
 def _setup_button_style():
     s = ttk.Style()
     s.configure('Roster.TButton', font=('Arial', 10), padding=(24, 6))
 
-# ── UI ────────────────────────────────────────────────────────────
+# ── UI helpers ────────────────────────────────────────────────────
 def bundled(name):
-    """Files packed inside the exe via --add-data (e.g. icon.ico)."""
     base = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
     return os.path.join(base, name)
 
 def beside_exe(name):
-    """Files placed next to the exe by the user (e.g. cover.png)."""
     if getattr(sys, 'frozen', False):
         return os.path.join(os.path.dirname(sys.executable), name)
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), name)
@@ -388,7 +569,6 @@ class App(tk.Tk):
         if os.path.exists(win_ico):
             self.iconbitmap(win_ico)
 
-        # Cover image — prefer user-supplied file beside exe, fall back to bundled default
         cover = beside_exe('cover.png')
         if not os.path.exists(cover):
             cover = bundled('cover.png')
@@ -412,30 +592,24 @@ class App(tk.Tk):
         self._nteams = 30
         self._refresh_toggle()
 
-        # Player / Team button groups
+        # Export / Import
         outer = tk.Frame(self, bg='white')
         outer.pack(padx=40, pady=(0, 24))
 
         groups = [
-            ('Player Data', False, [
-                ('Export', self.do_export_players),
-                ('Import', self.do_import_players),
-            ]),
-            ('Team Data', True, [
-                ('Export', self.do_export_teams),
-                ('Import', self.do_import_teams),
-            ]),
+            ('Export', 'ROM → XLSX', self.do_export),
+            ('Import', 'XLSX + ROM → New ROM', self.do_import),
         ]
-        for col, (label, underline, btns) in enumerate(groups):
+        for col, (label, subtitle, cmd) in enumerate(groups):
             grp = tk.Frame(outer, bg='white')
             grp.grid(row=0, column=col, padx=20, sticky='n')
-            font = ('Arial', 9, 'bold underline') if underline else ('Arial', 9, 'bold')
-            tk.Label(grp, text=label, font=font,
-                     bg='white', fg='black').pack(pady=(0, 6))
+            tk.Label(grp, text=label, font=('Arial', 11, 'bold'),
+                     bg='white', fg='#111827').pack(pady=(0, 2))
+            tk.Label(grp, text=subtitle, font=('Arial', 8),
+                     bg='white', fg='#6B7280').pack(pady=(0, 6))
             tk.Frame(grp, bg='#cccccc', height=1).pack(fill='x', pady=(0, 8))
-            for text, cmd in btns:
-                ttk.Button(grp, text=text, command=cmd,
-                           style='Roster.TButton').pack(pady=4)
+            ttk.Button(grp, text=label, command=cmd,
+                       style='Roster.TButton').pack(pady=4)
 
         # Status bar
         self._sv = tk.StringVar(value='Ready')
@@ -461,9 +635,6 @@ class App(tk.Tk):
         b.pack(side='left', padx=3)
         return b
 
-
-    # ── Menu bar ────────────────────────────────────────────────────
-
     def _menubar(self):
         bar    = tk.Menu(self)
         file_m = tk.Menu(bar, tearoff=0)
@@ -485,27 +656,30 @@ class App(tk.Tk):
         f = tk.Frame(w, bg='white', padx=36, pady=28)
         f.pack()
         tk.Label(f, text="NHL '94 Roster Tool", font=('Arial', 14, 'bold'), bg='white').pack()
-        tk.Label(f, text='Version 1.0.0',                    font=('Arial', 11),     bg='white', fg='#555').pack(pady=(6,0))
-        tk.Label(f, text='Released May 2026',                 font=('Arial', 10),     bg='white', fg='#888').pack(pady=(2,0))
-        tk.Label(f, text='Supports Sega Genesis (.bin) ROMs', font=('Arial', 10),     bg='white', fg='#888').pack(pady=(2,16))
+        tk.Label(f, text='Version 1.1.0',                    font=('Arial', 11), bg='white', fg='#555').pack(pady=(6,0))
+        tk.Label(f, text='Released May 2026',                 font=('Arial', 10), bg='white', fg='#888').pack(pady=(2,0))
+        tk.Label(f, text='Supports Sega Genesis (.bin) ROMs', font=('Arial', 10), bg='white', fg='#888').pack(pady=(2,16))
         ttk.Button(f, text='Close', command=w.destroy).pack()
-        w.grab_set()
-        w.focus_set()
+        w.grab_set(); w.focus_set()
 
     _PLAYER_HELP = [
         ('h1', 'Player Data'),
         ('h2', 'How It Works'),
-        ('p',  'Export reads all player data from a ROM and saves it as a CSV file you can open and edit in Excel or any spreadsheet app.\n\n'
-               'Import reads your edited CSV and writes the player data back into a ROM, saving a new versioned copy (e.g. ROM_v01.bin, ROM_v02.bin).\n\n'
+        ('p',  'Export reads all player data from a ROM and saves it as a two-sheet XLSX file '
+               '(Team Data + Player Data) you can open and edit in Excel or any spreadsheet app.\n\n'
+               'Import reads your edited XLSX and writes all data back into a ROM, saving a new copy.\n\n'
                'The 30/32 Teams toggle must match your ROM before importing.'),
         ('h2', 'Player Order'),
         ('p',  'Within each team, players must appear in this exact order:\n\n'
                '  1. Goalies (G)\n  2. Forwards (F)\n  3. Defense (D)\n\n'
-               'Each team must have 1–4 Goalies, 1–15 Forwards, and 1–15 Defense players.'),
+               'Each team must have 1–4 Goalies, 1–15 Forwards, and 1–15 Defense players.\n'
+               'Maximum 26 players per team.'),
         ('h2', 'Name Rules'),
-        ('p',  '• First and Last name combined — including the space between them — must not exceed 18 characters total.\n'
+        ('p',  '• First and Last name combined — including the space between them — must not exceed 20 characters total.\n'
                '• Allowed characters: letters, hyphens ( - ), periods ( . ), apostrophes ( \' ).\n'
                '• No numbers or other special characters in player names.'),
+        ('h2', 'Goalie Stats'),
+        ('p',  'Goalies must have Chk, StH, and ShA set to 0. These are skater-only attributes.'),
         ('h2', 'Column Reference'),
         ('code', 'First, Last     Player first and last name\n'
                  'Abv             Team abbreviation\n'
@@ -518,31 +692,34 @@ class App(tk.Tk):
                  'End-StR Rgh-StL Pas-GlR Agr-GlL\n'
                  '                Skill attributes — each value 0–6'),
         ('h2', 'Common Errors'),
-        ('p',  '"CSV missing columns"\n'
-               'Only use CSVs exported by this tool. Do not rename or remove columns.\n\n'
+        ('p',  '"Missing columns"\n'
+               'Only use XLSXs exported by this tool. Do not rename or remove columns.\n\n'
                '"Pos must be G, F, or D"\n'
                'Only these three position codes are accepted.\n\n'
                '"goalies must come before forwards and defense"\n'
                'Re-order rows so all Goalies appear first, then Forwards, then Defense.\n\n'
-               '"name is X chars — max 18"\n'
-               'Shorten the player\'s first or last name so the total (with space) is 18 or fewer.\n\n'
+               '"name is X chars — max 20"\n'
+               'Shorten the name so the total (with space) is 20 or fewer.\n\n'
                '"JNo must be hex 00–FF"\n'
-               'Jersey numbers use hexadecimal format (e.g. 0A, 1F, 2C). Use 00–09 for single-digit numbers.\n\n'
+               'Jersey numbers use hexadecimal format (e.g. 0A, 1F, 2C).\n\n'
                '"needs X bytes, only Y available"\n'
-               'Too much player data for this ROM\'s allocated space. Try shortening some long player names.'),
+               'Too much player data for this ROM\'s allocated space. Try shortening long player names.'),
     ]
 
     _TEAM_HELP = [
         ('h1', 'Team Data'),
         ('h2', 'How It Works'),
-        ('p',  'Export reads team names, abbreviations, arena names, and ratings from a ROM and saves them as a CSV.\n\n'
-               'Import writes those values back into a ROM, saving a new versioned copy.\n\n'
-               'You can import with or without the name columns. If the Arena column is present, city names, abbreviations, team names, and arena names will all be updated. If absent, only the numeric ratings are updated.\n\n'
+        ('p',  'Export reads team names, abbreviations, arena names, and ratings from a ROM and saves '
+               'them in the "Team Data" sheet of the XLSX file.\n\n'
+               'Import writes those values back into a ROM, saving a new copy.\n\n'
+               'If the Arena column is present and non-empty, city names, abbreviations, team names, '
+               'and arena names will all be updated. If absent, only the numeric ratings are updated.\n\n'
                'The 30/32 Teams toggle must match your ROM before importing.'),
         ('h2', 'Abbreviation Rules'),
         ('p',  '• Must be 2–3 characters long.\n'
                '• Letters and numbers only — no spaces, hyphens, or special characters.\n'
-               '• All abbreviations must be unique (not case-sensitive). No two teams can share the same abbreviation.'),
+               '• All abbreviations must be unique (not case-sensitive).\n'
+               '• Abbreviations must match between Team Data and Player Data sheets.'),
         ('h2', 'Column Reference'),
         ('code', 'Team City       City name (e.g. Boston)\n'
                  'Abv             Team abbreviation (e.g. BOS)\n'
@@ -556,26 +733,19 @@ class App(tk.Tk):
                  'Home            Home ice advantage (0–2)\n'
                  'Road            Road performance (0–3)'),
         ('h2', 'Common Errors'),
-        ('p',  '"CSV has X teams — expected Y"\n'
-               'The 30/32 toggle doesn\'t match your ROM. Switch it and try again.\n\n'
+        ('p',  '"Team Data has X rows — expected Y"\n'
+               'The 30/32 toggle doesn\'t match your XLSX. Switch it and try again.\n\n'
                '"Team City / Team Name / Arena must not be empty"\n'
                'All three name fields are required when updating team names.\n\n'
                '"Abv must be 2–3 letters/numbers"\n'
                'Check for spaces or special characters in the abbreviation column.\n\n'
                '"Abv is a duplicate"\n'
-               'Every team must have a unique abbreviation. Check for repeated values.\n\n'
-               '"Overall must be 0–99"\n'
-               'Value is out of the allowed range.\n\n'
-               '"Offense/Defense must be 0–7"\n'
-               'Values must be between 0 and 7.\n\n'
-               '"PK/PP must be 0–2"\n'
-               'Values must be 0, 1, or 2.\n\n'
-               '"Home must be 0–2" / "Road must be 0–3"\n'
-               'Values are out of the allowed range for those fields.'),
+               'Every team must have a unique abbreviation.\n\n'
+               '"Abbreviation mismatch"\n'
+               'The team abbreviations in Team Data and Player Data must match exactly and be in the same order.'),
     ]
 
     def _help_window(self, title, sections):
-        from tkinter import scrolledtext
         w = tk.Toplevel(self)
         w.title(title)
         w.resizable(False, True)
@@ -592,16 +762,10 @@ class App(tk.Tk):
             st.insert('end', text + '\n', tag)
         st.config(state='disabled')
         st.pack(fill='both', expand=True)
-        w.grab_set()
-        w.focus_set()
+        w.grab_set(); w.focus_set()
 
-    def _help_players(self):
-        self._help_window('Player Data Instructions', self._PLAYER_HELP)
-
-    def _help_teams(self):
-        self._help_window('Team Data Instructions', self._TEAM_HELP)
-
-    # ────────────────────────────────────────────────────────────────
+    def _help_players(self): self._help_window('Player Data Instructions', self._PLAYER_HELP)
+    def _help_teams(self):   self._help_window('Team Data Instructions', self._TEAM_HELP)
 
     def _set_teams(self, val):
         global n_teams
@@ -610,20 +774,51 @@ class App(tk.Tk):
         self._refresh_toggle()
 
     def _refresh_toggle(self):
-        on  = dict(bg='#1D4ED8', fg='white', relief='sunken')
+        on  = dict(bg='#315CA8', fg='white', relief='sunken')
         off = dict(bg='#e0e0e0', fg='#555',  relief='flat')
         self._btn30.configure(**(on if self._nteams==30 else off))
         self._btn32.configure(**(on if self._nteams==32 else off))
 
     def _status(self, msg, error=False):
         self._sv.set(msg)
-        self._status_lbl.configure(fg='#c0392b' if error else '#555')
+        self._status_lbl.configure(fg='#EB2226' if error else '#555')
         self.update_idletasks()
 
-    def _err(self, title, exc):
+    def _show_errors(self, title, summary, groups):
+        w = tk.Toplevel(self)
+        w.title(title)
+        w.resizable(False, True)
+        w.configure(bg='white')
+        f = tk.Frame(w, bg='white', padx=24, pady=20)
+        f.pack(fill='both', expand=True)
+        tk.Label(f, text=summary, font=('Arial', 11, 'bold'), bg='white',
+                 fg='#EB2226', wraplength=460, justify='left').pack(anchor='w')
+        st = scrolledtext.ScrolledText(f, width=62, height=14, wrap=tk.WORD,
+                                       font=('Arial', 10), bg='#FEF2F2', bd=1,
+                                       padx=12, pady=8, highlightthickness=0, relief='solid')
+        st.tag_configure('col',  font=('Arial', 9, 'bold'), foreground='#6B7280',
+                         spacing1=8, spacing3=2)
+        st.tag_configure('item', lmargin1=16, lmargin2=16, spacing3=2, foreground='#374151')
+        if isinstance(groups, dict):
+            for col, msgs in groups.items():
+                st.insert('end', col + '\n', 'col')
+                for msg in msgs:
+                    st.insert('end', f'  • {msg}\n', 'item')
+        elif isinstance(groups, list):
+            for msg in groups:
+                st.insert('end', f'  • {msg}\n', 'item')
+        st.config(state='disabled')
+        st.pack(fill='both', expand=True, pady=(12, 0))
+        ttk.Button(f, text='Close', command=w.destroy).pack(pady=(12, 0))
+        w.grab_set(); w.focus_set()
+
+    def _err(self, title, exc, groups=None):
         msg = str(exc)
         self._status(f'Error — {msg}', error=True)
-        messagebox.showerror(title, msg)
+        if groups:
+            self._show_errors(title, msg, groups)
+        else:
+            messagebox.showerror(title, msg)
 
     def _rom(self, title='Select ROM file'):
         p = filedialog.askopenfilename(title=title,
@@ -631,110 +826,116 @@ class App(tk.Tk):
         if not p: return None, None
         with open(p,'rb') as f: return f.read(), p
 
-    def _csv_in(self, title='Select CSV file'):
+    def _xlsx_in(self, title='Select XLSX file'):
         p = filedialog.askopenfilename(title=title,
-                filetypes=[('CSV','*.csv'),('All files','*.*')])
-        if not p: return None, None
-        with open(p,'r',encoding='utf-8-sig',newline='') as f: return f.read(), p
+                filetypes=[('Excel Workbook','*.xlsx'),('All files','*.*')])
+        return p or None
 
-    def _csv_out(self, default, initialdir=None):
-        return filedialog.asksaveasfilename(defaultextension='.csv',
+    def _xlsx_out(self, default, initialdir=None):
+        return filedialog.asksaveasfilename(defaultextension='.xlsx',
                 initialfile=default, initialdir=initialdir,
-                filetypes=[('CSV','*.csv')])
+                filetypes=[('Excel Workbook','*.xlsx')])
 
     def _bin_out(self, default, initialdir=None):
         return filedialog.asksaveasfilename(defaultextension='.bin',
                 initialfile=default, initialdir=initialdir,
                 filetypes=[('Genesis ROM','*.bin')])
 
-    @staticmethod
-    def _next_version(dir_, base):
-        for n in range(1, 100):
-            if not os.path.exists(os.path.join(dir_, f'{base}_v{n:02d}.bin')):
-                return f'{base}_v{n:02d}'
-        return f'{base}_v99'
-
-    def do_export_players(self):
-        rom, path = self._rom('Select ROM to export players from')
+    def do_export(self):
+        rom, path = self._rom('Select ROM to export')
         if not rom: return
         try:
-            rows = export_players(rom)
+            rom_count = detect_team_count(bytearray(rom))
+            if rom_count is not None and rom_count != n_teams:
+                if not messagebox.askyesno('Team Count Mismatch',
+                        f'ROM appears to have {rom_count} teams but the toggle is set to {n_teams}.\n\n'
+                        f'Switch to {rom_count} Teams and retry, or click Yes to export anyway.'):
+                    return
+            teams   = export_teams(rom)
+            players = export_players(rom)
         except Exception as e:
-            self._err('Player Export — ROM Read Error', e); return
+            self._err('Export — ROM Read Error', e); return
         base = os.path.splitext(os.path.basename(path))[0]
-        save = self._csv_out(f'{base}_playerData', initialdir=os.path.dirname(path))
+        save = self._xlsx_out(f'{base}_rosterData', initialdir=os.path.dirname(path))
         if not save: return
         try:
-            with open(save, 'w', newline='', encoding='utf-8') as f: f.write(rows_to_csv(rows))
+            rows_to_xlsx(save, teams, players)
         except Exception as e:
-            self._err('Player Export — Could Not Save File', e); return
-        self._status(f'{len(rows)} players exported → {os.path.basename(save)}')
+            self._err('Export — Could Not Save File', e); return
+        self._status(f'{len(teams)} teams, {len(players)} players exported → {os.path.basename(save)}')
 
-    def do_import_players(self):
-        txt, _ = self._csv_in('Select player CSV')
-        if not txt: return
+    def do_import(self):
+        xlsx_path = self._xlsx_in('Select XLSX to import')
+        if not xlsx_path: return
         try:
-            rows = csv_to_rows(txt)
+            team_rows, player_rows = xlsx_to_rows(xlsx_path)
         except Exception as e:
-            self._err('Player Import — Could Not Read CSV', e); return
-        rom, path = self._rom('Select ROM to import players into')
-        if not rom: return
+            self._err('Import — Could Not Read XLSX', e); return
+
+        team_gaps = check_no_gaps(team_rows, 'Team Data')
+        if team_gaps:
+            s = len(team_gaps)
+            self._err('Import — Blank Rows', f'{s} blank row{"s" if s>1 else ""} in Team Data',
+                      {'Blank Rows': team_gaps}); return
+        player_gaps = check_no_gaps(player_rows, 'Player Data')
+        if player_gaps:
+            s = len(player_gaps)
+            self._err('Import — Blank Rows', f'{s} blank row{"s" if s>1 else ""} in Player Data',
+                      {'Blank Rows': player_gaps}); return
+
+        def not_empty(row): return any(str(v).strip() for v in row.values())
+        team_rows   = [r for r in team_rows   if not_empty(r)]
+        player_rows = [r for r in player_rows if not_empty(r)]
+
         try:
-            out = import_players(rom, rows)
+            team_errs = validate_team_rows(team_rows)
         except ValueError as e:
-            self._err('Player Import — Validation Error', e); return
-        except Exception as e:
-            self._err('Player Import — Unexpected Error', e); return
-        rom_dir = os.path.dirname(path)
-        base = os.path.splitext(os.path.basename(path))[0]
-        save = self._bin_out(self._next_version(rom_dir, base), initialdir=rom_dir)
-        if not save: return
-        try:
-            with open(save, 'wb') as f: f.write(out)
-        except Exception as e:
-            self._err('Player Import — Could Not Save File', e); return
-        self._status(f'Players imported → {os.path.basename(save)}')
+            self._err('Import — Team Data Error', e); return
+        if team_errs:
+            total = sum(len(v) for v in team_errs.values())
+            self._err('Import — Team Data',
+                      f'{total} invalid team value{"s" if total>1 else ""}', team_errs); return
 
-    def do_export_teams(self):
-        rom, path = self._rom('Select ROM to export team data from')
-        if not rom: return
         try:
-            rows = export_teams(rom)
-        except Exception as e:
-            self._err('Team Export — ROM Read Error', e); return
-        base = os.path.splitext(os.path.basename(path))[0]
-        save = self._csv_out(f'{base}_teamData', initialdir=os.path.dirname(path))
-        if not save: return
-        try:
-            with open(save, 'w', newline='', encoding='utf-8') as f: f.write(rows_to_csv(rows))
-        except Exception as e:
-            self._err('Team Export — Could Not Save File', e); return
-        self._status(f'{len(rows)} teams exported → {os.path.basename(save)}')
-
-    def do_import_teams(self):
-        txt, _ = self._csv_in('Select team CSV')
-        if not txt: return
-        try:
-            rows = csv_to_rows(txt)
-        except Exception as e:
-            self._err('Team Import — Could Not Read CSV', e); return
-        rom, path = self._rom('Select ROM to import team data into')
-        if not rom: return
-        try:
-            out = import_teams(rom, rows)
+            player_errs = validate_player_rows(player_rows)
         except ValueError as e:
-            self._err('Team Import — Validation Error', e); return
+            self._err('Import — Player Data Error', e); return
+        if player_errs:
+            total = sum(len(v) for v in player_errs.values())
+            self._err('Import — Player Data',
+                      f'{total} invalid player value{"s" if total>1 else ""}', player_errs); return
+
+        abv_errs = validate_abv_sync(team_rows, player_rows)
+        if abv_errs:
+            total = sum(len(v) for v in abv_errs.values())
+            self._err('Import — Abbreviation Mismatch',
+                      f'Abbreviation mismatch — {total} issue{"s" if total>1 else ""}',
+                      abv_errs); return
+
+        rom, path = self._rom('Select ROM to import into')
+        if not rom: return
+        try:
+            rom_count = detect_team_count(bytearray(rom))
+            if rom_count is not None and rom_count != n_teams:
+                messagebox.showerror('Team Count Mismatch',
+                    f'ROM contains {rom_count} teams but the toggle is set to {n_teams}.\n'
+                    f'Switch to {rom_count} Teams and retry.')
+                return
+            after_teams   = import_teams(rom, team_rows)
+            after_players = import_players(after_teams, player_rows)
+        except ValueError as e:
+            self._err('Import — Validation Error', e); return
         except Exception as e:
-            self._err('Team Import — Unexpected Error', e); return
-        rom_dir = os.path.dirname(path)
+            self._err('Import — Unexpected Error', e); return
+
         base = os.path.splitext(os.path.basename(path))[0]
-        save = self._bin_out(self._next_version(rom_dir, base), initialdir=rom_dir)
+        save = self._bin_out(f'{base}_modified', initialdir=os.path.dirname(path))
         if not save: return
         try:
-            with open(save, 'wb') as f: f.write(out)
+            with open(save, 'wb') as f: f.write(after_players)
         except Exception as e:
-            self._err('Team Import — Could Not Save File', e); return
-        self._status(f'Team data imported → {os.path.basename(save)}')
+            self._err('Import — Could Not Save File', e); return
+        self._status(f'{len(team_rows)} teams, {len(player_rows)} players imported → {os.path.basename(save)}')
 
 if __name__ == '__main__':
     App().mainloop()

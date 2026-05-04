@@ -20,7 +20,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install pyinstaller pillow
+        run: pip install pyinstaller pillow openpyxl
 
       - name: Build
         working-directory: roster-tool-app
@@ -48,7 +48,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install pyinstaller pillow
+        run: pip install pyinstaller pillow openpyxl
 
       - name: Build
         working-directory: roster-tool-app
