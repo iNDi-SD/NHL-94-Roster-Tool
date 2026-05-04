@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL '94 Roster Tool - How to Use</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #FFFFFF;
+      --bg2:      #F1F5F9;
+      --surface:  #FFFFFF;
+      --surface2: #F8FAFC;
+      --border:   rgba(0,0,0,.09);
+      --border2:  rgba(0,0,0,.14);
+      --text:     #374151;
+      --dim:      #6B7280;
+      --heading:  #111827;
+      --accent:   #315CA8;
+      --green:    #16A34A;
+      --red:      #EB2226;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg2);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Topbar */
+    .topbar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border2);
+      height: 54px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .topbar-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 100%;
+    }
+    .topbar-logo { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+    .topbar-title { font-size: 13px; font-weight: 500; color: var(--dim); }
+    .topbar-title strong { color: var(--heading); }
+    .topbar-back { margin-left: auto; font-size: 12px; color: var(--dim); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .15s; }
+    .topbar-back:hover { color: var(--heading); }
+
+    /* Layout */
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 56px 24px 96px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .content { min-width: 0; }
+
+    /* Sidenav */
+    .sidenav {
+      position: sticky;
+      top: 70px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sidenav-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--dim);
+      margin-bottom: 8px; padding-left: 10px;
+    }
+    .sidenav a {
+      display: block;
+      font-size: 12px; font-weight: 500;
+      color: var(--dim);
+      text-decoration: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      transition: color .15s, border-color .15s, background .15s;
+      line-height: 1.4;
+    }
+    .sidenav a:hover { color: var(--text); background: rgba(0,0,0,.04); }
+    .sidenav a.active { color: var(--accent); border-left-color: var(--accent); background: rgba(49,92,168,.07); }
+
+    /* Hero */
+    .hero { margin-bottom: 56px; }
+    .hero h1 { font-size: 32px; font-weight: 900; color: var(--heading); line-height: 1.15; margin-bottom: 14px; }
+    .hero h1 em { font-style: normal; color: var(--accent); }
+    .hero p { font-size: 16px; line-height: 1.75; color: var(--text); max-width: 620px; }
+
+    /* Section */
+    .section { margin-bottom: 56px; }
+    .section-label {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--accent); margin-bottom: 12px;
+    }
+    .section-label .num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 900;
+    }
+    h2 { font-size: 22px; font-weight: 800; color: var(--heading); margin-bottom: 14px; }
+    h3 { font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; margin: 28px 0 10px; }
+    p { font-size: 14px; line-height: 1.75; color: var(--text); margin-bottom: 12px; }
+    p:last-child { margin-bottom: 0; }
+    strong { color: var(--heading); font-weight: 600; }
+    code { font-family: 'Roboto Mono', monospace; font-size: 12px; background: var(--surface2); border: 1px solid var(--border2); padding: 2px 6px; border-radius: 3px; color: #EB2226; }
+
+    /* Divider */
+    hr { border: none; border-top: 1px solid var(--border); margin: 56px 0; }
+
+    /* Steps */
+    .steps { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
+    .step {
+      display: flex; gap: 18px; align-items: flex-start;
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 18px 20px;
+    }
+    .step-num {
+      width: 32px; height: 32px; flex-shrink: 0;
+      background: var(--bg2); border: 1px solid var(--border2); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--accent);
+      font-family: 'Roboto Mono', monospace;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-size: 14px; font-weight: 700; color: var(--heading); margin-bottom: 5px; }
+    .step-desc { font-size: 13px; line-height: 1.65; color: var(--text); }
+
+    /* Info callout */
+    .callout {
+      border-left: 3px solid #D97706;
+      background: #FFFBEB;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 20px 0;
+    }
+    .callout p { font-size: 13px; color: var(--text); margin: 0; }
+    .callout strong { color: #92400E; }
+    .callout.blue { border-left-color: #EB2226; background: #FEF2F2; }
+    .callout.blue p { color: #B01C20; }
+    .callout.blue strong { color: #EB2226; }
+    .callout.red { border-left-color: var(--red); background: #EBF0F8; }
+    .callout.red p { color: #264A8E; }
+    .callout.red strong { color: #315CA8; }
+    .callout.green { border-left-color: var(--green); background: #F0FDF4; }
+    .callout.green p { color: #166534; }
+    .callout.green strong { color: #16A34A; }
+
+    /* Rules table */
+    .rtable { width: 100%; border-collapse: collapse; font-size: 13px; margin: 16px 0; table-layout: fixed; }
+    .rtable th {
+      text-align: left; font-size: 10px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--dim);
+      padding: 8px 14px; background: var(--surface2); border: 1px solid var(--border);
+      width: 33.33%;
+    }
+    .rtable td { padding: 10px 14px; border: 1px solid var(--border); vertical-align: top; line-height: 1.55; }
+    .rtable tr:nth-child(even) td { background: #F8FAFC; }
+    .rtable td:first-child { font-family: 'Roboto Mono', monospace; font-size: 12px; color: #EB2226; font-weight: 500; word-break: break-word; }
+
+    /* Pill badges */
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; letter-spacing: .04em;
+      padding: 3px 9px; border-radius: 4px; white-space: nowrap;
+    }
+    .pill.ok   { background: #F0FDF4; color: #166534; border: 1px solid #86EFAC; }
+    .pill.err  { background: #EBF0F8; color: #264A8E; border: 1px solid #9BB0D4; }
+    .pill.note { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
+    .pill.info { background: #FEF2F2; color: #B01C20; border: 1px solid #FCA5A5; }
+
+    /* Error list */
+    .error-list { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+    .error-item {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .error-icon {
+      flex-shrink: 0; margin-top: 2px;
+      font-size: 13px; color: var(--accent);
+    }
+    .error-title { font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 3px; }
+    .error-fix { font-size: 12px; color: var(--dim); line-height: 1.5; }
+
+    /* Two-col layout */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    .col-card {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 18px 20px;
+    }
+    .col-card h4 { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 10px; }
+    .col-card ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .col-card li { font-size: 13px; color: var(--text); padding-left: 14px; position: relative; line-height: 1.5; }
+    .col-card li::before { content: '→'; position: absolute; left: 0; color: var(--dim); }
+
+    /* Toggle explainer */
+    .toggle-demo {
+      display: flex; gap: 0; background: #E2E8F0; border-radius: 6px;
+      padding: 4px; width: fit-content; margin: 16px 0;
+    }
+    .toggle-demo span {
+      padding: 6px 18px; border-radius: 4px;
+      font: 700 13px/1 'Roboto', sans-serif;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: var(--dim);
+    }
+    .toggle-demo span.on { background: #315CA8; color: #fff; }
+
+    /* Rules grid */
+    .warning-banner {
+      display: flex; align-items: center; gap: 10px;
+      background: #FEF2F2; border: 1px solid rgba(235,34,38,.3);
+      border-radius: 6px; padding: 10px 16px; margin-bottom: 12px;
+    }
+    .warning-banner-icon {
+      width: 22px; height: 22px; flex-shrink: 0;
+      background: #EB2226; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; color: #fff; line-height: 1;
+    }
+    .warning-banner-text {
+      font-size: 11px; font-weight: 700; letter-spacing: .14em;
+      text-transform: uppercase; color: #EB2226;
+    }
+    .rules-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0; }
+    .rule-card {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 8px; padding: 18px 20px;
+    }
+    .rule-title { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+    .rule-desc { font-size: 13px; line-height: 1.65; color: var(--text); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 20px 32px;
+      font-size: 11px; color: var(--dim); text-align: center;
+    }
+
+    @media (max-width: 800px) {
+      .page { grid-template-columns: 1fr; gap: 0; padding: 32px 16px 64px; }
+      .sidenav { display: none; }
+      .hero h1 { font-size: 26px; }
+      .two-col { grid-template-columns: 1fr; }
+      .rules-grid { grid-template-columns: 1fr; }
+      .topbar-inner { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <span class="topbar-logo">NHL '94</span>
+    <span class="topbar-title"><strong>Roster Tool</strong> - How to Use</span>
+    <a class="topbar-back" href="index.html">← Back to tool</a>
+  </div>
+</div>
+
+<div class="page">
+
+  <nav class="sidenav">
+    <div class="sidenav-label">On this page</div>
+    <a href="#what-you-need">What you need</a>
+    <a href="#toggle">Set team toggle</a>
+    <a href="#export">Export data</a>
+    <a href="#edit">Update data</a>
+    <a href="#import">Import to ROM</a>
+    <a href="#issues">Common issues</a>
+    <a href="#tips">Tips</a>
+  </nav>
+
+  <div class="content">
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Edit your roster.<br><em>No setup required.</em></h1>
+    <p>This tool lets you pull player and team data out of a NHL '94 Genesis ROM into a spreadsheet, edit it, and write it back in. Everything runs in your browser.</p>
+  </div>
+
+  <!-- WHAT YOU NEED -->
+  <div class="section" id="what-you-need">
+    <div class="section-label"><span class="num">✓</span> Before you start</div>
+    <h2>What you need</h2>
+
+    <div class="two-col">
+      <div class="col-card">
+        <h4>Required</h4>
+        <ul>
+          <li>A NHL '94 Genesis ROM file (<code>.bin</code>)</li>
+          <li>A spreadsheet app - Excel, Google Sheets, or LibreOffice</li>
+        </ul>
+      </div>
+      <div class="col-card">
+        <h4>Not required</h4>
+        <ul>
+          <li>An account or login</li>
+          <li>Any software install</li>
+          <li>An internet connection after the page loads</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p><strong>Your files stay on your computer.</strong> No data is sent anywhere. The ROM and spreadsheet are processed entirely inside your browser tab.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- 30/32 TOGGLE -->
+  <div class="section" id="toggle">
+    <div class="section-label"><span class="num">1</span> Step one</div>
+    <h2>Set the 30 or 32 team toggle</h2>
+
+    <p>NHL '94 ROMs come in two versions - <strong>30 team</strong> or <strong>32 team</strong>. You need to tell the tool which one you're working with before doing anything else.</p>
+
+    <div class="toggle-demo">
+      <span class="on">30 Teams</span>
+      <span>32 Teams</span>
+    </div>
+
+    <div class="callout">
+      <p><strong>Not sure which version you have?</strong> Load your ROM on the Export card and try exporting. If the team count is wrong, you'll see an error that tells you exactly what to switch to.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- STEP 1: EXPORT -->
+  <div class="section" id="export">
+    <div class="section-label"><span class="num">2</span> Step two</div>
+    <h2>Export - Player/Team Data</h2>
+
+    <p>This reads all team and player data out of your ROM and saves it as an <code>.xlsx</code> file you can open in any spreadsheet application.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Upload your ROM</div>
+          <div class="step-desc">Place or browse for your ROM file <code>.bin</code> of choice.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Click "Export ROM Data"</div>
+          <div class="step-desc">An export of all ROM player and team data will be generated for download.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- STEP 2: EDIT -->
+  <div class="section" id="edit">
+    <div class="section-label"><span class="num">3</span> Step three</div>
+    <h2>Update Team/Player Data</h2>
+
+    <p>The ROM export contains two sheets, <strong>Team Data</strong> and <strong>Player Data</strong>. Update the values you want to change, save the file. See the rules below.</p>
+
+    <h3>Team Data sheet</h3>
+    <p>One row per team, in the order they appear in the ROM.</p>
+
+    <table class="rtable">
+      <tr><th>Column</th><th>What it is</th><th>Allowed values</th></tr>
+      <tr><td>Team City</td><td>The city name (e.g. "Toronto")</td><td>Letters, numbers, and spaces only</td></tr>
+      <tr><td>Abv</td><td>Short abbreviation (e.g. "TOR")</td><td>2-3 letters or numbers, no spaces. Must be unique.</td></tr>
+      <tr><td>Team Name</td><td>The team name (e.g. "Maple Leafs")</td><td>Letters, numbers, and spaces only</td></tr>
+      <tr><td>Arena</td><td>The arena name</td><td>Letters, numbers, and spaces only</td></tr>
+      <tr><td>Overall</td><td>Team overall rating shown on menus</td><td>0 - 99</td></tr>
+      <tr><td>Offense</td><td>Team offensive rating</td><td>0 - 7</td></tr>
+      <tr><td>Defense</td><td>Team defensive rating</td><td>0 - 7</td></tr>
+      <tr><td>PK</td><td>Penalty kill rating</td><td>0 - 2</td></tr>
+      <tr><td>PP</td><td>Power play rating</td><td>0 - 2</td></tr>
+      <tr><td>Home</td><td>Home ice advantage</td><td>0 - 2</td></tr>
+      <tr><td>Road</td><td>Road performance</td><td>0 - 3</td></tr>
+    </table>
+
+    <h3>Player Data sheet</h3>
+    <p>One row per player. Keep all players for the same team grouped together - do not mix teams. The order within a team must be: <strong>G, F, D.</strong></p>
+
+    <table class="rtable">
+      <tr><th>Column</th><th>What it is</th><th>Allowed values</th></tr>
+      <tr><td>First, Last</td><td>Player's first and last name</td><td>Letters, periods, hyphens, apostrophes only. Combined cannot exceed 20 characters total.</td></tr>
+      <tr><td>Abv</td><td>Which team this player is on</td><td>Must match abbreviation in Team Data exactly</td></tr>
+      <tr><td>Pos</td><td>Player position</td><td><strong>G</strong> (goalie), <strong>F</strong> (forward), or <strong>D</strong> (defense) - capital letter only</td></tr>
+      <tr><td>JNo</td><td>Jersey number</td><td>The number as it appears on the player's jersey (e.g. <code>2</code>, <code>17</code>, <code>99</code>).</td></tr>
+      <tr><td>Ovr</td><td>Player overall rating</td><td>Cannot be blank. Exported for reference only - editing the value has no effect on the ROM.</td></tr>
+      <tr><td>Wgt</td><td>Weight / body checking effectiveness</td><td>0 - 15</td></tr>
+      <tr><td>Hnd</td><td>Handedness - even = left, odd = right</td><td>0 - 15</td></tr>
+      <tr><td>Agl, Spd, OfA, DfA, ShP-PkC, End-StR, Rgh-StL, Pas-GlR, Agr-GlL</td><td>Skating and skill attributes</td><td>0 - 6</td></tr>
+      <tr><td>Chk, StH, ShA</td><td>Checking, stick handling, shot accuracy</td><td>0 - 6 for skaters (F, D). <strong>Must be 0 for goalies (G).</strong></td></tr>
+    </table>
+
+    <div class="warning-banner">
+      <div class="warning-banner-icon">!</div>
+      <div class="warning-banner-text">Important Rules</div>
+    </div>
+    <div class="rules-grid">
+      <div class="rule-card">
+        <div class="rule-title">No Blank Rows</div>
+        <div class="rule-desc">All data must be one continuous block with no blank rows.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-title">Consistent Team Order</div>
+        <div class="rule-desc">The abbreviations in Team Data and Player Data must be in the same order.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-title">Team Count</div>
+        <div class="rule-desc">Both sheets must have exactly 30 or 32 teams to match your toggle setting. Adding or removing teams is not supported.</div>
+      </div>
+      <div class="rule-card">
+        <div class="rule-title">Player Count</div>
+        <div class="rule-desc">Each team must have <strong>1-4 goalies</strong>, <strong>1-15 forwards</strong>, and <strong>1-15 defense</strong>. Maximum 26 players total per team.</div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- STEP 3: IMPORT -->
+  <div class="section" id="import">
+    <div class="section-label"><span class="num">4</span> Step four</div>
+    <h2>Import - Update ROM</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Upload Team/Player data</div>
+          <div class="step-desc">Place or browse your <code>.xlsx</code> file in the Import card.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Update ROM</div>
+          <div class="step-desc">Click the Import button and select your base ROM file.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Download and test</div>
+          <div class="step-desc">Your original ROM is unchanged. Load the ROM in your emulator and test.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Check the status log</div>
+          <div class="step-desc">The status area shows what passed and what failed. Make edits and try again.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMMON ERRORS -->
+  <div class="section" id="issues">
+    <div class="section-label"><span class="num">?</span> Common Issues</div>
+
+    <div class="error-list">
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Wrong team count</div>
+          <div class="error-fix">Your toggle doesn't match your ROM. Switch it to match the error message and try again.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Blank row in data</div>
+          <div class="error-fix">Delete the empty row the error identifies and re-upload.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Abv mismatch between sheets</div>
+          <div class="error-fix">Team Data and Player Data abbreviations must match exactly and be in the same order.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Name too long</div>
+          <div class="error-fix">First + last name combined must be 20 characters or under. Abbreviate the first name if needed.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Goalie has non-zero Chk, StH, or ShA</div>
+          <div class="error-fix">Set Chk, StH, and ShA to 0 for all goalie rows.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Wrong position order</div>
+          <div class="error-fix">Rows within each team must be ordered: goalies first, then forwards, then defense.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Value out of range</div>
+          <div class="error-fix">A stat is outside its allowed range. The error identifies the row and column - fix the value and re-upload.</div>
+        </div>
+      </div>
+
+      <div class="error-item">
+        <div class="error-icon">→</div>
+        <div>
+          <div class="error-title">Missing sheet</div>
+          <div class="error-fix">Both "Team Data" and "Player Data" sheet tabs must exist. Don't rename or delete either tab.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- TIPS -->
+  <div class="section" id="tips">
+    <div class="section-label"><span class="num">★</span> Tips</div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">★</div>
+        <div class="step-body">
+          <div class="step-title">Export first, always</div>
+          <div class="step-desc">Always start by exporting from your ROM. Don't try to build a spreadsheet from scratch - the export gives you the correctly formatted file with all the right columns and structure in place.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">★</div>
+        <div class="step-body">
+          <div class="step-title">The Ovr column is display-only</div>
+          <div class="step-desc">The <strong>Ovr</strong> column in Player Data is calculated from the player's stats and exported for reference. Changing it has no effect on the ROM - the actual player stats are what matter.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">★</div>
+        <div class="step-body">
+          <div class="step-title">You can import without changing team names</div>
+          <div class="step-desc">If you only want to edit player stats or team ratings, you can delete the <strong>Team City</strong>, <strong>Team Name</strong>, and <strong>Arena</strong> columns from Team Data before importing. The tool will only update ratings and leave the original names in the ROM untouched.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">★</div>
+        <div class="step-body">
+          <div class="step-title">Only one card active at a time</div>
+          <div class="step-desc">Loading a file on the Export card resets the Import card, and vice versa. This is intentional - the two operations are separate workflows and can't run at the same time.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">★</div>
+        <div class="step-body">
+          <div class="step-title">Test in your emulator after every change</div>
+          <div class="step-desc">Load the modified ROM in your emulator and check the team and player screens before assuming everything worked. If something looks wrong, compare your spreadsheet against the original export to spot differences.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /.content -->
+</div>
+
+<footer>NHL '94 Roster Tool - How to Use &nbsp;·&nbsp; All processing runs in your browser. No files are uploaded.</footer>
+
+<script>
+  const navLinks = document.querySelectorAll('.sidenav a');
+  const sections = [...navLinks].map(a => document.querySelector(a.getAttribute('href')));
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const link = document.querySelector('.sidenav a[href="#' + entry.target.id + '"]');
+        if (link) link.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => { if (s) observer.observe(s); });
+</script>
+</body>
+</html>

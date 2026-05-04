@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NHL '94 Roster Tool</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <style>
+    @font-face {
+      font-family: 'NHL94';
+      src: url("NHL'94.ttf") format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'NHLCA';
+      src: url("NHLCALGA.TTF") format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      color: #1E293B;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #0D1B2A url('bg_rink.png') center center / cover no-repeat fixed;
+    }
+
+    /* Darken the bg enough to keep everything readable */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 18, 30, 0.30);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    header, main, footer { position: relative; z-index: 1; }
+
+    /* ── Header ── */
+    header {
+      background: #fff;
+      border-bottom: 1px solid rgba(0,0,0,.1);
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+    .header-inner {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 24px 0 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .logo { font-family: 'NHLCA', 'Roboto', sans-serif; font-size: 36px; font-weight: normal; letter-spacing: .02em; color: #000; }
+    .help-btn {
+      margin-left: auto;
+      display: flex; align-items: center; justify-content: center;
+      text-decoration: none;
+      flex-shrink: 0;
+      opacity: .85;
+      transition: opacity .15s;
+    }
+    .help-btn:hover { opacity: 1; }
+    .help-btn img { display: block; }
+
+    /* ── Controls row ── */
+    .controls-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .reset-btn {
+      background: #fff; border: 1px solid #EB2226;
+      color: #EB2226; padding: 5px 14px; border-radius: 6px;
+      font: 700 14px/1 'Roboto', sans-serif; letter-spacing: .04em; text-transform: uppercase;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .reset-btn:hover { background: #EB2226; color: #fff; }
+
+    /* ── 30/32 toggle ── */
+    .toggle {
+      display: flex;
+      background: #fff;
+      border-radius: 6px;
+      padding: 3px;
+      gap: 2px;
+      border: 1px solid rgba(0,0,0,.12);
+    }
+    .toggle-btn {
+      background: none; border: none;
+      padding: 5px 14px;
+      font: 700 14px/1 'Roboto', sans-serif;
+      letter-spacing: .04em; text-transform: uppercase;
+      color: #6B7280; cursor: pointer; border-radius: 4px;
+      transition: background .12s, color .12s;
+    }
+    .toggle-btn.active { background: #315CA8; color: #fff; }
+    .toggle-btn:hover:not(.active) { color: #111827; }
+
+    /* ── Page content ── */
+    main {
+      flex: 1;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 32px 16px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .card-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .card-pair .card { height: 240px; }
+
+    @media (max-width: 600px) {
+      .card-pair { grid-template-columns: 1fr; }
+    }
+
+    /* ── Operation card ── */
+    .card {
+      background: #fff;
+      border: 1px solid rgba(0,0,0,.1);
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,.18);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .card-head {
+      padding: 14px 20px 12px;
+      border-bottom: 1px solid rgba(0,0,0,.07);
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .card-title { font-size: 14px; font-weight: 700; color: #111827; }
+    .card-dir {
+      font-size: 11px; font-weight: 500; color: #6B7280;
+      letter-spacing: .04em;
+    }
+    .card-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px; flex: 1; }
+    .card-body .dz { flex: 1; }
+
+    /* ── Drop zone ── */
+    .dz {
+      border: 2px dashed rgba(0,0,0,.15);
+      border-radius: 6px;
+      padding: 22px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      transition: border-color .15s, background .15s;
+      background: #F8FAFC;
+    }
+    .dz:hover { border-color: #315CA8; background: rgba(49,92,168,.04); }
+    .dz.drag-over { border-color: #315CA8; background: rgba(49,92,168,.07); }
+    .dz.loaded { border-style: solid; border-color: rgba(0,0,0,.1); background: #fff; padding: 14px 16px; }
+    .dz.loaded.dz-ok  { border-color: #16A34A; background: rgba(22,163,74,.05); }
+    .dz.loaded.dz-err { border-color: #EB2226; background: rgba(235,34,38,.05); }
+    .dz input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .dz-icon { font-size: 22px; color: #9CA3AF; margin-bottom: 6px; }
+    .dz-label { font-size: 13px; color: #6B7280; }
+    .dz-label strong { color: #315CA8; font-weight: 600; }
+    .dz-hint { font-size: 11px; color: #9CA3AF; margin-top: 3px; }
+    .file-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+    .file-check { color: #16A34A; font-size: 16px; flex-shrink: 0; }
+    .file-check.pending { color: #9CA3AF; font-size: 12px; letter-spacing: .05em; }
+    .file-check.dz-err  { color: #EB2226; }
+    .file-name { font-family: 'Roboto Mono', monospace; font-size: 12px; font-weight: 500; color: #111827; }
+    .file-size { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .file-upload-hint { font-size: 10px; color: #6B7280; margin-top: 4px; font-style: italic; }
+    .file-clear {
+      margin-left: auto; background: none; border: 1px solid rgba(0,0,0,.15);
+      color: #6B7280; width: 28px; height: 28px; border-radius: 4px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0; transition: border-color .12s, color .12s;
+    }
+    .file-clear:hover { border-color: #315CA8; color: #315CA8; }
+
+    /* ── Action button ── */
+    .btn {
+      background: #315CA8; color: #fff; border: none; border-radius: 6px;
+      padding: 11px 20px; font: 700 12px/1 'Roboto', sans-serif;
+      letter-spacing: .04em; text-transform: uppercase;
+      cursor: pointer; transition: background .15s; width: 100%;
+    }
+    .btn:hover:not(:disabled) { background: #264A8E; }
+    .btn:disabled { opacity: .25; cursor: not-allowed; }
+
+    /* ── Status log ── */
+    .log-clear {
+      margin-left: auto; background: none; border: 1px solid rgba(0,0,0,.15);
+      color: #6B7280; padding: 3px 10px; border-radius: 4px;
+      font: 500 11px/1 'Roboto', sans-serif; letter-spacing: .03em;
+      cursor: pointer; transition: border-color .12s, color .12s;
+    }
+    .log-clear:hover { border-color: #EB2226; color: #EB2226; }
+    .log-empty { padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; font-style: italic; }
+    .log-entry {
+      padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,.06);
+      display: flex; flex-direction: column; gap: 10px;
+      border-left: 3px solid transparent;
+    }
+    .log-entry:last-child { border-bottom: none; }
+    .log-entry.ok  { border-left-color: #16A34A; }
+    .log-entry.err { border-left-color: #EB2226; }
+    .log-header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    .log-op { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #9CA3AF; flex-shrink: 0; }
+    .log-body { display: flex; flex-direction: column; max-height: 340px; overflow-y: auto; }
+    .log-msg { font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .log-msg.ok  { color: #16A34A; }
+    .log-msg.err { color: #EB2226; }
+    .log-group { display: flex; flex-direction: column; gap: 4px; }
+    .log-group-label {
+      font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: #6B7280; border-bottom: 1px solid rgba(0,0,0,.07); padding-bottom: 3px;
+    }
+    .log-details { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .log-details li { font-size: 11px; color: #374151; padding-left: 12px; position: relative; line-height: 1.4; }
+    .log-details li::before { content: '•'; position: absolute; left: 0; color: #9CA3AF; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center; padding: 16px;
+      font-size: 11px; color: rgba(255,255,255,.35);
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(13,27,42,.6);
+      backdrop-filter: blur(8px);
+      position: relative; z-index: 1;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 480px) {
+      .logo { font-size: 14px; }
+      .toggle-btn { padding: 5px 10px; }
+      main { padding: 16px 12px 40px; }
+      .card-head { padding: 14px 16px 12px; }
+      .card-body { padding: 14px 16px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+<div class="header-inner">
+  <img src="rostertool_logo.png" alt="NHL '94 Roster Tool" style="height:56px;width:auto;flex-shrink:0;">
+  <span class="logo"><span style="color:#315ca8">Roster</span> <span style="color:#eb2226">Tool</span></span>
+  <a class="help-btn" href="help.html" target="_blank" title="Open guide"><img src="help_icon-export.png" alt="Help" style="height:36px;width:auto;"></a>
+</div>
+</header>
+
+<main>
+
+  <div>
+    <div class="controls-row">
+      <div class="toggle">
+        <button class="toggle-btn active" data-teams="30">30 Teams</button>
+        <button class="toggle-btn" data-teams="32">32 Teams</button>
+      </div>
+      <button class="reset-btn" id="resetBtn" type="button">Reset</button>
+    </div>
+    <div class="card-pair">
+
+      <!-- Export -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Export</span>
+          <span class="card-dir">ROM → XLSX</span>
+        </div>
+        <div class="card-body">
+          <div class="dz" id="allExpZone">
+            <input type="file" id="allExpInput" accept=".bin">
+            <div id="allExpEmpty">
+              <div class="dz-icon">↑</div>
+              <div class="dz-label"><strong>Choose ROM file</strong> or drag and drop</div>
+              <div class="dz-hint">.bin — GENS NHL '94 ROM</div>
+            </div>
+            <div id="allExpLoaded" class="file-row" style="display:none">
+              <span class="file-check">✓</span>
+              <div><div class="file-name" id="allExpName"></div><div class="file-size" id="allExpSize"></div><div class="file-upload-hint" id="allExpHint" style="display:none"></div></div>
+              <button class="file-clear" id="allExpClear" type="button" title="Choose different file">↺</button>
+            </div>
+          </div>
+          <button class="btn" id="allExpBtn" disabled>Export ROM Data</button>
+        </div>
+      </div>
+
+      <!-- Import -->
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Import</span>
+          <span class="card-dir">XLSX + ROM → New ROM</span>
+        </div>
+        <div class="card-body">
+          <div class="dz" id="allImpZone">
+            <input type="file" id="allImpInput" accept=".xlsx">
+            <div id="allImpEmpty">
+              <div class="dz-icon">↑</div>
+              <div class="dz-label"><strong>Choose XLSX file</strong> or drag and drop</div>
+              <div class="dz-hint">.xlsx — exported from this tool</div>
+            </div>
+            <div id="allImpLoaded" class="file-row" style="display:none">
+              <span class="file-check">✓</span>
+              <div><div class="file-name" id="allImpName"></div><div class="file-size" id="allImpSize"></div><div class="file-upload-hint" id="allImpHint" style="display:none"></div></div>
+              <button class="file-clear" id="allImpClear" type="button" title="Choose different file">↺</button>
+            </div>
+          </div>
+          <button class="btn" id="allImpBtn" disabled>Import to ROM</button>
+          <input type="file" id="allImpRomInput" accept=".bin" style="display:none">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Status log ── -->
+  <div class="card">
+    <div class="card-head" style="align-items:center">
+      <span class="card-title">Status</span>
+      <button class="log-clear" id="logClear" type="button">Clear</button>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="log-empty" id="logEmpty">No activity yet</div>
+    </div>
+  </div>
+
+</main>
+
+<footer>NHL '94 Roster Tool &nbsp;·&nbsp; v1.0.0 &nbsp;·&nbsp; All processing runs in your browser — no files are uploaded</footer>
+
+<script>
+let nTeams = 30;
+
+const BLOCK_AREA_END = { 32: 2030418 };
+const OVERALL_BASE   = { 30: 1952292, 32: 2003636 };
+
+// ── Binary helpers ───────────────────────────────────────────
+function u32(d,o){ return (d[o]*0x1000000)+(d[o+1]<<16)+(d[o+2]<<8)+d[o+3]; }
+function u16(d,o){ return (d[o]<<8)+d[o+1]; }
+function readStr(d,o,len){ let s=''; for(let i=0;i<len;i++){ if(!d[o+i])break; s+=String.fromCharCode(d[o+i]); } return s.trim(); }
+function tmPtrs(d){ const p=[]; for(let i=0;i<nTeams;i++) p.push(u32(d,782+i*4)); return p; }
+function readTeamName(d,ptr){
+  const tmOff=u16(d,ptr+4); let pos=ptr+tmOff;
+  const cl=u16(d,pos); const city=readStr(d,pos+2,cl-2); pos+=cl;
+  const al=u16(d,pos); const abv=readStr(d,pos+2,al-2);  pos+=al;
+  const nl=u16(d,pos); const name=readStr(d,pos+2,nl-2);  pos+=nl;
+  const arl=u16(d,pos); const arena=readStr(d,pos+2,arl-2);
+  return {city,abv,name,arena};
+}
+function parseNameSections(d,start){
+  let pos=start;
+  for(let s=0;s<4;s++){ if(pos+2>d.length)break; const l=u16(d,pos); if(l<2)break; pos+=l; }
+  return pos-start;
+}
+function buildNameSection(str){
+  const b=Array.from(str).map(c=>c.charCodeAt(0));
+  if(b.length%2!==0)b.push(0);
+  return new Uint8Array([((2+b.length)>>8),((2+b.length)&0xFF),...b]);
+}
+function readGoalieCount(d,ptr){
+  const hex4=d[ptr+80].toString(16).padStart(2,'0')+d[ptr+81].toString(16).padStart(2,'0');
+  const idx=hex4.indexOf('0'); return idx<0?4:idx;
+}
+function goalieBytes(n){ return n===1?[0x10,0x00]:n===2?[0x11,0x00]:n===3?[0x11,0x10]:[0x11,0x11]; }
+function buildDefaultLines(nG,nF){
+  const ff=nG+1,fd=nG+nF+1,line=[1,fd,fd+1,ff,ff+1,ff+2,ff+3];
+  const buf=new Uint8Array(64); let pos=0;
+  for(let i=0;i<8;i++){ for(const p of line)buf[pos++]=p; buf[pos++]=0; }
+  return buf;
+}
+function writeU16(b,p,v){ b[p]=(v>>8)&0xFF; b[p+1]=v&0xFF; }
+function writeU32(b,p,v){ b[p]=(v>>>24)&0xFF; b[p+1]=(v>>>16)&0xFF; b[p+2]=(v>>>8)&0xFF; b[p+3]=v&0xFF; }
+
+// ── Player export ────────────────────────────────────────────
+function exportPlayers(data){
+  const rows=[];
+  for(const ptr of tmPtrs(data)){
+    const {abv}=readTeamName(data,ptr);
+    const plOff=u16(data,ptr),nG=readGoalieCount(data,ptr),nF=(data[ptr+79]>>4)&0xF;
+    let pos=ptr+plOff,pi=0;
+    while(pos+1<data.length){
+      const pnl=u16(data,pos); if(pnl<4)break; pos+=2; pi++;
+      let nm=''; for(let j=0;j<pnl-2;j++){ const c=data[pos++]; if(c!==0)nm+=String.fromCharCode(c); }
+      const jno=data[pos++].toString(16);
+      const att=[]; for(let b=0;b<7;b++){ att.push((data[pos]>>4)&0xF); att.push(data[pos]&0xF); pos++; }
+      const pt=pi<=nG?'G':pi<=nG+nF?'F':'D';
+      let tot=pt==='G'
+        ?Math.floor(att[1]*4.5)+Math.floor(att[4]*4.5)+Math.floor(att[5]*4.5)+att[10]+att[11]+att[12]+att[13]
+        :att[1]*2+att[2]*3+att[3]*3+att[4]*2+att[5]+att[6]*2+att[8]*3+att[9]*2+att[10]+att[12];
+      const ovr=Math.min(99,tot<50?Math.floor(25+tot/2):tot);
+      const parts=nm.split(' ');
+      rows.push({'First':parts[0]||'','Last':parts.slice(1).join(' ')||'','Abv':abv,'Pos':pt,'JNo':jno,'Ovr':ovr,
+        'Wgt':att[0],'Agl':att[1],'Spd':att[2],'OfA':att[3],'DfA':att[4],'ShP-PkC':att[5],'Chk':att[6],
+        'Hnd':att[7],'StH':att[8],'ShA':att[9],'End-StR':att[10],'Rgh-StL':att[11],'Pas-GlR':att[12],'Agr-GlL':att[13]});
+    }
+  }
+  return rows;
+}
+
+// ── Player import ────────────────────────────────────────────
+function buildAttrNibbles(p){
+  const h=v=>parseInt(v).toString(16);
+  return h(p['Wgt'])+String(p['Agl'])+String(p['Spd'])+String(p['OfA'])+String(p['DfA'])
+    +String(p['ShP-PkC'])+String(p['Chk'])+h(p['Hnd'])
+    +String(p['StH'])+String(p['ShA'])+String(p['End-StR'])+String(p['Rgh-StL'])+String(p['Pas-GlR'])+String(p['Agr-GlL']);
+}
+
+function importPlayers(romBuf,playerRows){
+  const FIELDS=['First','Last','Abv','Pos','JNo','Ovr','Wgt','Agl','Spd','OfA','DfA','ShP-PkC','Chk','Hnd','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+  const NF=['Agl','Spd','OfA','DfA','ShP-PkC','Chk','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+  const NAME_RE=/^[A-Za-z.'\-]*$/;
+  if(!playerRows.length)throw new Error('Sheet is empty.');
+  const missing=FIELDS.filter(f=>!(f in playerRows[0]));
+  if(missing.length)throw validationError(`Missing columns`,missing.map(f=>`"${f}"`));
+  const rowErrors=[];
+  playerRows.forEach((p,ri)=>{
+    const lbl=`Row ${ri+1}${ (p['Last']||p['First']) ? ` (${[p['First'],p['Last']].filter(Boolean).join(' ')})` : '' }`;
+    if(!['G','F','D'].includes(p['Pos']))rowErrors.push(`${lbl}: Pos "${p['Pos']}" must be G, F, or D`);
+    const first=String(p['First']??''),last=String(p['Last']??'');
+    if(first.length+1+last.length>20)rowErrors.push(`${lbl}: name is ${first.length+1+last.length} chars — max 20`);
+    if(!NAME_RE.test(first))rowErrors.push(`${lbl}: First name "${first}" has invalid characters`);
+    if(!NAME_RE.test(last)) rowErrors.push(`${lbl}: Last name "${last}" has invalid characters`);
+    if(!/^[0-9a-fA-F]{1,2}$/.test(String(p['JNo'])))rowErrors.push(`${lbl}: JNo "${p['JNo']}" must be hex 00–FF`);
+    ['Wgt','Hnd'].forEach(f=>{ const v=parseInt(p[f]); if(isNaN(v)||v<0||v>15)rowErrors.push(`${lbl}: ${f} "${p[f]}" must be 0–15`); });
+    NF.forEach(f=>{ const v=parseInt(p[f]); if(isNaN(v)||v<0||v>6)rowErrors.push(`${lbl}: ${f} "${p[f]}" must be 0–6`); });
+  });
+  if(rowErrors.length){ const shown=rowErrors.slice(0,10); if(rowErrors.length>10)shown.push(`…and ${rowErrors.length-10} more`); throw validationError(`${rowErrors.length} invalid value${rowErrors.length>1?'s':''}`,shown); }
+  const abvOrder=[],teamMap={};
+  for(const row of playerRows){ const abv=(row['Abv']||'').trim(); if(!teamMap[abv]){teamMap[abv]=[];abvOrder.push(abv);} teamMap[abv].push(row); }
+  if(abvOrder.length!==nTeams)throw new Error(`CSV has ${abvOrder.length} teams — expected ${nTeams}.`);
+  const teamInfo=abvOrder.map(abv=>{
+    const players=teamMap[abv]; let tb=0,nG=0,nF=0,nD=0,phase=0;
+    for(const p of players){
+      const nl=(String(p['First'])+String(p['Last'])).length;
+      tb+=(nl+1)%2===0?nl+11:nl+12;
+      if(p['Pos']==='G'){if(phase>0)throw new Error(`${abv}: goalies must come before forwards and defense`);nG++;}
+      else if(p['Pos']==='F'){if(phase>1)throw new Error(`${abv}: forwards must come before defense`);phase=1;nF++;}
+      else{phase=2;nD++;}
+    }
+    if(nG<1||nG>4)throw new Error(`${abv}: goalies must be 1–4 (found ${nG})`);
+    if(nF<1||nF>15)throw new Error(`${abv}: forwards must be 1–15 (found ${nF})`);
+    if(nD<1||nD>15)throw new Error(`${abv}: defense must be 1–15 (found ${nD})`);
+    return {abv,players,tb,nG,nF,nD};
+  });
+  const data=new Uint8Array(romBuf),ptrs=tmPtrs(data);
+  const oldTmOffs=ptrs.map(ptr=>u16(data,ptr+4));
+  const totalSpace=oldTmOffs.reduce((s,t)=>s+(t-146),0);
+  const base=Math.floor(totalSpace/nTeams),baseEven=base%2===0?base:base-1;
+  const extra=totalSpace-baseEven*nTeams,teams2=Math.floor(extra/2);
+  const spaces=Array.from({length:nTeams},(_,i)=>i>=nTeams-teams2?baseEven+2:baseEven);
+  teamInfo.forEach((t,i)=>{ const need=t.tb+2; if(need>spaces[i])throw new Error(`${t.abv}: needs ${need} bytes, only ${spaces[i]} available`); });
+  const areaEnd=BLOCK_AREA_END[nTeams]??null;
+  const nameData=ptrs.map((ptr,i)=>{ const ns=ptr+oldTmOffs[i]; if(i<nTeams-1)return data.slice(ns,ptrs[i+1]); if(areaEnd!==null)return data.slice(ns,areaEnd); return data.slice(ns,ns+parseNameSections(data,ns)); });
+  const oldHdrs=ptrs.map(ptr=>data.slice(ptr,ptr+146));
+  const oldEnd=areaEnd??(ptrs[nTeams-1]+oldTmOffs[nTeams-1]+nameData[nTeams-1].length);
+  const enc=new TextEncoder(),blocks=[],newPtrs=[ptrs[0]];
+  for(let i=0;i<nTeams;i++){
+    const {players,tb,nG,nF}=teamInfo[i],sp=spaces[i],empty=sp-tb-2;
+    const plOff=146+empty,tmOff=146+sp,bsz=tmOff+nameData[i].length;
+    const blk=new Uint8Array(bsz);
+    blk.set(oldHdrs[i],0); writeU16(blk,0,plOff); writeU16(blk,4,tmOff);
+    blk[79]=((nF&0xF)<<4)|(teamInfo[i].nD&0xF);
+    const [gb1,gb2]=goalieBytes(nG); blk[80]=gb1; blk[81]=gb2;
+    blk.set(buildDefaultLines(nG,nF),82);
+    for(let j=146;j<plOff;j++)blk[j]=0xFF;
+    let wp=plOff;
+    for(const p of players){
+      const ns=String(p['First'])+' '+String(p['Last']),nb=enc.encode(ns);
+      const nml=ns.length%2===0?ns.length+2:ns.length+3;
+      blk[wp++]=0x00; blk[wp++]=nml; blk.set(nb,wp); wp+=nb.length;
+      if(ns.length%2!==0)blk[wp++]=0x00;
+      blk[wp++]=parseInt(String(p['JNo']),16);
+      const attr=buildAttrNibbles(p);
+      for(let b=0;b<7;b++)blk[wp++]=parseInt(attr.slice(b*2,b*2+2),16);
+    }
+    blk[wp++]=0x00; blk[wp++]=0x02; blk.set(nameData[i],tmOff);
+    blocks.push(blk); if(i<nTeams-1)newPtrs.push(newPtrs[i]+bsz);
+  }
+  const pre=data.slice(0,ptrs[0]),post=data.slice(oldEnd);
+  const newRom=new Uint8Array(pre.length+blocks.reduce((s,b)=>s+b.length,0)+post.length);
+  let wp=0; newRom.set(pre,wp); wp+=pre.length;
+  for(const b of blocks){newRom.set(b,wp);wp+=b.length;} newRom.set(post,wp);
+  for(let i=0;i<nTeams;i++)writeU32(newRom,782+i*4,newPtrs[i]);
+  let ck=0; for(let i=0x200;i+1<newRom.length;i+=2)ck=(ck+(newRom[i]<<8)+newRom[i+1])&0xFFFF;
+  newRom[0x18E]=(ck>>8)&0xFF; newRom[0x18F]=ck&0xFF;
+  return newRom;
+}
+
+// ── Team export ──────────────────────────────────────────────
+function exportTeams(data){
+  return tmPtrs(data).map((ptr,i)=>{
+    const t=readTeamName(data,ptr),b76=data[ptr+76],b77=data[ptr+77],b78=data[ptr+78];
+    return {'Team City':t.city,'Abv':t.abv,'Team Name':t.name,'Arena':t.arena,
+      'Overall':data[OVERALL_BASE[nTeams]+i],
+      'Offense':(b76>>4)&0xF,'Defense':b76&0xF,'PK':(b77>>4)&0xF,'PP':b77&0xF,
+      'Home':(b78>>4)&0xF,'Road':b78&0xF};
+  });
+}
+
+// ── Team import ──────────────────────────────────────────────
+function importTeams(romBuf,rows){
+  if(rows.length!==nTeams)throw new Error(`Sheet has ${rows.length} rows — expected ${nTeams}.`);
+  const errors=[];
+  rows.forEach((row,i)=>{
+    const lbl=`Row ${i+1}${ (row['Abv']||'').trim() ? ` (${(row['Abv']||'').trim()})` : '' }`;
+    const ovr=+row['Overall'],off=+row['Offense'],def=+row['Defense'],pk=+row['PK'],pp=+row['PP'],home=+row['Home'],road=+row['Road'];
+    if(isNaN(ovr)||ovr<0||ovr>99) errors.push(`${lbl}: Overall ${row['Overall']} is out of range (0–99)`);
+    if(isNaN(off)||off<0||off>7)  errors.push(`${lbl}: Offense ${row['Offense']} is out of range (0–7)`);
+    if(isNaN(def)||def<0||def>7)  errors.push(`${lbl}: Defense ${row['Defense']} is out of range (0–7)`);
+    if(isNaN(pk)||pk<0||pk>2)     errors.push(`${lbl}: PK ${row['PK']} is out of range (0–2)`);
+    if(isNaN(pp)||pp<0||pp>2)     errors.push(`${lbl}: PP ${row['PP']} is out of range (0–2)`);
+    if(isNaN(home)||home<0||home>2) errors.push(`${lbl}: Home ${row['Home']} is out of range (0–2)`);
+    if(isNaN(road)||road<0||road>3) errors.push(`${lbl}: Road ${row['Road']} is out of range (0–3)`);
+  });
+  if(errors.length){ const shown=errors.slice(0,10); if(errors.length>10)shown.push(`…and ${errors.length-10} more`); throw validationError(`${errors.length} invalid value${errors.length>1?'s':''}`,shown); }
+  const hasNames='Arena' in rows[0];
+  if(hasNames){
+    rows.forEach((row,i)=>{
+      const lbl=`Row ${i+1}${ (row['Abv']||'').trim() ? ` (${(row['Abv']||'').trim()})` : '' }`;
+      ['Team City','Team Name','Arena'].forEach(f=>{ if(!row[f]||!row[f].trim())errors.push(`${lbl}: ${f} must not be empty`); });
+      const abv=(row['Abv']||'').trim();
+      if(!/^[A-Za-z0-9]{2,3}$/.test(abv))errors.push(`${lbl}: Abv "${abv||'(blank)'}" must be 2–3 letters/numbers`);
+    });
+    const seen=new Set();
+    rows.forEach((row,i)=>{ const a=(row['Abv']||'').trim().toUpperCase(); if(seen.has(a))errors.push(`Row ${i+1}: Abv "${(row['Abv']||'').trim()}" is a duplicate`); seen.add(a); });
+    if(errors.length){ const shown=errors.slice(0,10); if(errors.length>10)shown.push(`…and ${errors.length-10} more`); throw validationError(`${errors.length} invalid value${errors.length>1?'s':''}`,shown); }
+  }
+  const data=new Uint8Array(romBuf),ptrs=tmPtrs(data);
+  if(!hasNames){
+    const out=new Uint8Array(data);
+    rows.forEach((row,i)=>{ out[OVERALL_BASE[nTeams]+i]=+row['Overall']; const ptr=ptrs[i]; out[ptr+76]=((+row['Offense'])<<4)|(+row['Defense']); out[ptr+77]=((+row['PK'])<<4)|(+row['PP']); out[ptr+78]=((+row['Home'])<<4)|(+row['Road']); });
+    let ck=0; for(let i=0x200;i+1<out.length;i+=2)ck=(ck+(out[i]<<8)+out[i+1])&0xFFFF;
+    out[0x18E]=(ck>>8)&0xFF; out[0x18F]=ck&0xFF; return out;
+  }
+  const oldTmOffs=ptrs.map(ptr=>u16(data,ptr+4));
+  const areaEnd=BLOCK_AREA_END[nTeams]??(ptrs[nTeams-1]+oldTmOffs[nTeams-1]+parseNameSections(data,ptrs[nTeams-1]+oldTmOffs[nTeams-1]));
+  const blockSizes=ptrs.map((ptr,i)=>i<nTeams-1?ptrs[i+1]-ptr:areaEnd-ptr);
+  const newNames=rows.map(row=>{ const parts=[buildNameSection(row['Team City'].trim()),buildNameSection(row['Abv'].trim()),buildNameSection(row['Team Name'].trim()),buildNameSection(row['Arena'].trim())]; const buf=new Uint8Array(parts.reduce((s,p)=>s+p.length,0)); let pos=0; for(const p of parts){buf.set(p,pos);pos+=p.length;} return buf; });
+  rows.forEach((row,i)=>{ const oldPlOff=u16(data,ptrs[i]),playerBytes=oldTmOffs[i]-oldPlOff,free=blockSizes[i]-146-playerBytes-newNames[i].length; if(free<0)throw new Error(`Row ${i+1} (${(row['Abv']||'').trim()}): names are ${-free} bytes too large`); });
+  const out=new Uint8Array(data);
+  rows.forEach((row,i)=>{ const ptr=ptrs[i],oldPlOff=u16(data,ptr),playerBytes=oldTmOffs[i]-oldPlOff,newNameSize=newNames[i].length,total=blockSizes[i],free=total-146-playerBytes-newNameSize,newPlOff=146+free,newTmOff=total-newNameSize; writeU16(out,ptr,newPlOff); writeU16(out,ptr+4,newTmOff); out[ptr+76]=((+row['Offense'])<<4)|(+row['Defense']); out[ptr+77]=((+row['PK'])<<4)|(+row['PP']); out[ptr+78]=((+row['Home'])<<4)|(+row['Road']); for(let j=146;j<newPlOff;j++)out[ptr+j]=0xFF; out.set(data.slice(ptr+oldPlOff,ptr+oldTmOffs[i]),ptr+newPlOff); out.set(newNames[i],ptr+newTmOff); });
+  rows.forEach((row,i)=>{ out[OVERALL_BASE[nTeams]+i]=+row['Overall']; });
+  let ck=0; for(let i=0x200;i+1<out.length;i+=2)ck=(ck+(out[i]<<8)+out[i+1])&0xFFFF;
+  out[0x18E]=(ck>>8)&0xFF; out[0x18F]=ck&0xFF; return out;
+}
+
+// ── File utilities ─────────────────────────────────────────────
+function dlBin(u8,name){ dl(new Blob([u8],{type:'application/octet-stream'}),name); }
+function dl(blob,name){ const url=URL.createObjectURL(blob); Object.assign(document.createElement('a'),{href:url,download:name}).click(); URL.revokeObjectURL(url); }
+function fmtSize(b){ return b>1048576?`${(b/1048576).toFixed(1)} MB`:`${Math.round(b/1024)} KB`; }
+function stem(filename){ return filename.replace(/\.[^.]+$/,''); }
+
+// ── Validation error helper ───────────────────────────────────
+function validationError(summary, details){
+  const err=new Error(summary); err.details=details; return err;
+}
+
+// ── Status log ───────────────────────────────────────────────
+function logMsg(type, op, msg, details){
+  const body=document.getElementById('logBody');
+  body.innerHTML='';
+  const entry=document.createElement('div');
+  entry.className=`log-entry ${type}`;
+  const header=document.createElement('div'); header.className='log-header';
+  const msgEl=document.createElement('span'); msgEl.className=`log-msg ${type}`; msgEl.textContent=msg;
+  const opEl=document.createElement('span'); opEl.className='log-op'; opEl.textContent=op;
+  header.append(msgEl,opEl);
+  entry.appendChild(header);
+  if(details instanceof Map){
+    details.forEach((msgs,col)=>{
+      const group=document.createElement('div'); group.className='log-group';
+      const label=document.createElement('div'); label.className='log-group-label'; label.textContent=col;
+      const ul=document.createElement('ul'); ul.className='log-details';
+      msgs.forEach(m=>{ const li=document.createElement('li'); li.textContent=m; ul.appendChild(li); });
+      group.append(label,ul); entry.appendChild(group);
+    });
+  } else if(Array.isArray(details) && details.length){
+    const ul=document.createElement('ul'); ul.className='log-details';
+    details.forEach(d=>{ const li=document.createElement('li'); li.textContent=d; ul.appendChild(li); });
+    entry.appendChild(ul);
+  }
+  body.appendChild(entry);
+}
+document.getElementById('logClear').addEventListener('click',()=>{
+  document.getElementById('logBody').innerHTML='<div class="log-empty" id="logEmpty">No activity yet</div>';
+});
+document.getElementById('resetBtn').addEventListener('click',()=>location.reload());
+
+// ── Drop zone factory ─────────────────────────────────────────
+function makeDZ(ids, onFile){
+  const zone=document.getElementById(ids.zone),input=document.getElementById(ids.input),
+        empty=document.getElementById(ids.empty),loaded=document.getElementById(ids.loaded),
+        nameEl=document.getElementById(ids.name),sizeEl=document.getElementById(ids.size),
+        clearBtn=document.getElementById(ids.clear),
+        checkEl=loaded.querySelector('.file-check'),
+        hintEl=loaded.querySelector('.file-upload-hint');
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag-over'));
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag-over');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0]);});
+  input.addEventListener('change',()=>{ if(input.files[0]){ const f=input.files[0]; input.value=''; load(f); } });
+  clearBtn.addEventListener('click',e=>{e.stopPropagation();input.click();});
+  function reset(){ zone.classList.remove('loaded','dz-ok','dz-err'); empty.style.display=''; loaded.style.display='none'; input.value=''; }
+  function load(file){
+    zone.classList.add('loaded'); zone.classList.remove('dz-ok','dz-err');
+    empty.style.display='none'; loaded.style.display='flex';
+    nameEl.textContent=file.name; sizeEl.textContent=fmtSize(file.size);
+    checkEl.textContent='···'; checkEl.className='file-check pending';
+    hintEl.style.display='none';
+    onFile(file);
+  }
+  function setOk(){
+    zone.classList.add('dz-ok'); zone.classList.remove('dz-err');
+    checkEl.textContent='✓'; checkEl.className='file-check';
+    hintEl.style.display='none';
+  }
+  function setErr(){
+    zone.classList.add('dz-err'); zone.classList.remove('dz-ok');
+    checkEl.textContent='✕'; checkEl.className='file-check dz-err';
+    hintEl.textContent='Fix errors and choose a corrected file to re-upload';
+    hintEl.style.display='';
+  }
+  return { reset, setOk, setErr };
+}
+function readBuf(file){ return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(file);}); }
+
+// ── Toggle ────────────────────────────────────────────────────
+document.querySelectorAll('.toggle-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{ nTeams=+btn.dataset.teams; document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.toggle('active',b===btn)); });
+});
+
+// ── ROM team count detection ──────────────────────────────────
+function detectTeamCount(data){
+  const ptrs=[];
+  for(let i=0;i<34;i++) ptrs.push(u32(data,782+i*4));
+  let n=1;
+  while(n<ptrs.length && ptrs[n]>ptrs[n-1] && ptrs[n]<data.length) n++;
+  if(n>=32) return 32;
+  if(n>=30) return 30;
+  return null;
+}
+
+// ── Export ────────────────────────────────────────────────────
+let allExpData=null, allExpFile=null;
+const expDZ=makeDZ({zone:'allExpZone',input:'allExpInput',empty:'allExpEmpty',loaded:'allExpLoaded',name:'allExpName',size:'allExpSize',clear:'allExpClear'}, file=>{
+  allExpFile=null; allExpData=null;
+  document.getElementById('allExpBtn').disabled=true;
+  if(!file)return;
+  if(!/\.bin$/i.test(file.name)){ expDZ.reset(); logMsg('err','Export',`"${file.name}" is not a .bin ROM file`); return; }
+  impDZ.reset(); allImpData=null; document.getElementById('allImpBtn').disabled=true;
+  allExpFile=file;
+  expDZ.setOk();
+  document.getElementById('allExpBtn').disabled=false;
+  readBuf(file).then(buf=>{ allExpData=new Uint8Array(buf); });
+});
+document.getElementById('allExpBtn').addEventListener('click',()=>{
+  try{
+    const romCount=detectTeamCount(allExpData);
+    if(romCount!==null&&romCount!==nTeams) throw new Error(`ROM contains ${romCount} teams but the toggle is set to ${nTeams}. Switch to ${romCount} Teams and retry.`);
+    const teams=exportTeams(allExpData);
+    const players=exportPlayers(allExpData);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(teams),   'Team Data');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(players), 'Player Data');
+    XLSX.writeFile(wb, `${stem(allExpFile.name)}_rosterData.xlsx`);
+    logMsg('ok','Export',`${teams.length} teams, ${players.length} players exported`);
+  }catch(err){ logMsg('err','Export',err.message,err.details); }
+});
+
+// ── Blank row gap check ───────────────────────────────────────
+function checkNoGaps(rows, sheet){
+  const notEmpty=r=>Object.values(r).some(v=>String(v).trim()!=='');
+  let first=-1, last=-1;
+  for(let i=0;i<rows.length;i++){ if(notEmpty(rows[i])){ if(first===-1)first=i; last=i; } }
+  if(first===-1) return;
+  const blanks=[];
+  for(let i=first+1;i<last;i++){ if(!notEmpty(rows[i])) blanks.push(`Row ${i+1}`); }
+  if(blanks.length) throw validationError(`${blanks.length} blank row${blanks.length>1?'s':''} in ${sheet}`, new Map([['Blank Rows',blanks]]));
+}
+
+// ── XLSX row validators (run at upload time, no ROM needed) ──
+function validateTeamRows(rows){
+  if(rows.length!==nTeams) throw new Error(`Team Data has ${rows.length} rows — expected ${nTeams}.`);
+  const errs=new Map(), e=(col,msg)=>{ if(!errs.has(col))errs.set(col,[]); errs.get(col).push(msg); };
+  const hasNames='Arena' in rows[0];
+  const seen=new Set();
+  rows.forEach((row,i)=>{
+    const abv=(row['Abv']||'').trim();
+    const lbl=`Row ${i+1}${abv?` (${abv})`:''}`;
+    const ovr=+row['Overall'],off=+row['Offense'],def=+row['Defense'],pk=+row['PK'],pp=+row['PP'],home=+row['Home'],road=+row['Road'];
+    if(isNaN(ovr)||ovr<0||ovr>99) e('Overall',`${lbl}: ${row['Overall']} out of range (0–99)`);
+    if(isNaN(off)||off<0||off>7)  e('Offense',`${lbl}: ${row['Offense']} out of range (0–7)`);
+    if(isNaN(def)||def<0||def>7)  e('Defense',`${lbl}: ${row['Defense']} out of range (0–7)`);
+    if(isNaN(pk) ||pk<0 ||pk>2)   e('PK',     `${lbl}: ${row['PK']} out of range (0–2)`);
+    if(isNaN(pp) ||pp<0 ||pp>2)   e('PP',     `${lbl}: ${row['PP']} out of range (0–2)`);
+    if(isNaN(home)||home<0||home>2) e('Home',  `${lbl}: ${row['Home']} out of range (0–2)`);
+    if(isNaN(road)||road<0||road>3) e('Road',  `${lbl}: ${row['Road']} out of range (0–3)`);
+    if(!abv) e('Abv',`${lbl}: Abv is blank`);
+    else if(!/^[A-Za-z0-9]{2,3}$/.test(abv)) e('Abv',`${lbl}: "${abv}" must be 2–3 letters/numbers`);
+    else { const a=abv.toUpperCase(); if(seen.has(a)) e('Abv',`${lbl}: "${abv}" is a duplicate`); seen.add(a); }
+    if(hasNames){
+      const NAME_RE=/^[A-Za-z0-9 .'\-]+$/;
+      ['Team City','Team Name','Arena'].forEach(f=>{
+        const v=String(row[f]||'').trim();
+        if(!v) e(f,`${lbl}: must not be empty`);
+        else if(!NAME_RE.test(v)) e(f,`${lbl}: "${v}" contains invalid characters (letters, numbers, and spaces only)`);
+      });
+    }
+  });
+  if(errs.size){ const total=[...errs.values()].reduce((s,a)=>s+a.length,0); throw validationError(`${total} invalid team value${total>1?'s':''}`,errs); }
+}
+
+function validatePlayerRows(rows){
+  const FIELDS=['First','Last','Abv','Pos','JNo','Ovr','Wgt','Agl','Spd','OfA','DfA','ShP-PkC','Chk','Hnd','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+  const NF=['Agl','Spd','OfA','DfA','ShP-PkC','Chk','StH','ShA','End-StR','Rgh-StL','Pas-GlR','Agr-GlL'];
+  const NAME_RE=/^[A-Za-z.'\-]*$/;
+  if(!rows.length) throw new Error('Player Data sheet is empty.');
+  const missing=FIELDS.filter(f=>!(f in rows[0]));
+  if(missing.length) throw validationError(`Missing columns`,missing.map(f=>`"${f}"`));
+  const errs=new Map(), e=(col,msg)=>{ if(!errs.has(col))errs.set(col,[]); errs.get(col).push(msg); };
+  rows.forEach((p,ri)=>{
+    const lbl=`Row ${ri+1}${ (p['Last']||p['First']) ? ` (${[p['First'],p['Last']].filter(Boolean).join(' ')})` : '' }`;
+    if(!String(p['Abv']||'').trim()) e('Abv',`${lbl}: Abv is blank`);
+    if(String(p['Ovr']??'').trim()==='') e('Ovr',`${lbl}: Ovr is blank`);
+    if(!['G','F','D'].includes(p['Pos'])) e('Pos',`${lbl}: "${p['Pos']}" must be G, F, or D`);
+    const first=String(p['First']??''),last=String(p['Last']??'');
+    if(first.length+1+last.length>20) e('Name',`${lbl}: ${first.length+1+last.length} chars — max 20`);
+    if(!NAME_RE.test(first)) e('First',`${lbl}: "${first}" has invalid characters`);
+    if(!NAME_RE.test(last))  e('Last', `${lbl}: "${last}" has invalid characters`);
+    if(!/^[0-9a-fA-F]{1,2}$/.test(String(p['JNo']))) e('JNo',`${lbl}: "${p['JNo']}" must be hex 00–FF`);
+    ['Wgt','Hnd'].forEach(f=>{ const v=parseInt(p[f]); if(isNaN(v)||v<0||v>15) e(f,`${lbl}: "${p[f]}" must be 0–15`); });
+    NF.forEach(f=>{ const v=parseInt(p[f]); if(isNaN(v)||v<0||v>6) e(f,`${lbl}: "${p[f]}" must be 0–6`); });
+    if(p['Pos']==='G'){
+      ['Chk','StH','ShA'].forEach(f=>{ const v=parseInt(p[f]); if(!isNaN(v)&&v!==0) e('Goalie Stats',`${lbl}: "${f}" must be 0 for goalies (found ${p[f]})`); });
+    }
+  });
+  if(errs.size){ const total=[...errs.values()].reduce((s,a)=>s+a.length,0); throw validationError(`${total} invalid player value${total>1?'s':''}`,errs); }
+  const abvOrder=[],teamMap={};
+  for(const row of rows){ const abv=(row['Abv']||'').trim(); if(!teamMap[abv]){teamMap[abv]=[];abvOrder.push(abv);} teamMap[abv].push(row); }
+  if(abvOrder.length!==nTeams) throw new Error(`Player Data has ${abvOrder.length} teams — expected ${nTeams}.`);
+  const se=(col,msg)=>{ if(!errs.has(col))errs.set(col,[]); errs.get(col).push(msg); };
+  abvOrder.forEach(abv=>{
+    const players=teamMap[abv]; let nG=0,nF=0,nD=0,phase=0;
+    for(const p of players){
+      if(p['Pos']==='G'){if(phase>0)se('Position Order',`${abv}: goalies must come before forwards and defense`);nG++;}
+      else if(p['Pos']==='F'){if(phase>1)se('Position Order',`${abv}: forwards must come before defense`);phase=1;nF++;}
+      else{phase=2;nD++;}
+    }
+    if(nG<1||nG>4) se('Roster Counts',`${abv}: goalies must be 1–4 (found ${nG})`);
+    if(nF<1||nF>15) se('Roster Counts',`${abv}: forwards must be 1–15 (found ${nF})`);
+    if(nD<1||nD>15) se('Roster Counts',`${abv}: defense must be 1–15 (found ${nD})`);
+    if(nG+nF+nD>26) se('Roster Counts',`${abv}: max 26 players per team (found ${nG+nF+nD})`);
+  });
+  if(errs.size){ const total=[...errs.values()].reduce((s,a)=>s+a.length,0); throw validationError(`${total} roster issue${total>1?'s':''}`,errs); }
+}
+
+// ── Abv cross-sheet validation ────────────────────────────────
+function validateAbvSync(teams, players){
+  const teamAbvs=teams.map(r=>String(r['Abv']||'').trim());
+  const seen=new Set(), playerAbvOrder=[];
+  players.forEach(row=>{ const abv=String(row['Abv']||'').trim(); if(!seen.has(abv)){ seen.add(abv); playerAbvOrder.push(abv); } });
+  const teamSet=new Set(teamAbvs), playerSet=new Set(playerAbvOrder);
+  const onlyInTeam  =teamAbvs.filter(a=>!playerSet.has(a));
+  const onlyInPlayer=playerAbvOrder.filter(a=>!teamSet.has(a));
+  if(onlyInTeam.length||onlyInPlayer.length){
+    const msgs=[];
+    onlyInTeam.forEach(a=>msgs.push(`"${a}" — in Team Data but missing from Player Data`));
+    onlyInPlayer.forEach(a=>msgs.push(`"${a}" — in Player Data but missing from Team Data`));
+    throw validationError(`Abbreviation mismatch — ${msgs.length} issue${msgs.length>1?'s':''}`, new Map([['Abv',msgs]]));
+  }
+  const orderErrors=[];
+  for(let i=0;i<teamAbvs.length;i++){
+    if(teamAbvs[i]!==playerAbvOrder[i])
+      orderErrors.push(`Position ${i+1}: Team Data has "${teamAbvs[i]}", Player Data has "${playerAbvOrder[i]}"`);
+  }
+  if(orderErrors.length){
+    const shown=orderErrors.slice(0,10); if(orderErrors.length>10)shown.push(`…and ${orderErrors.length-10} more`);
+    throw validationError(`Abbreviation order mismatch — ${orderErrors.length} position${orderErrors.length>1?'s':''}`, new Map([['Abv Order',shown]]));
+  }
+}
+
+// ── Import ────────────────────────────────────────────────────
+let allImpData=null;
+const impDZ=makeDZ({zone:'allImpZone',input:'allImpInput',empty:'allImpEmpty',loaded:'allImpLoaded',name:'allImpName',size:'allImpSize',clear:'allImpClear'}, file=>{
+  allImpData=null;
+  document.getElementById('allImpBtn').disabled=true;
+  if(!file)return;
+  if(!/\.xlsx$/i.test(file.name)){ impDZ.reset(); logMsg('err','Import',`"${file.name}" is not an .xlsx file`); return; }
+  expDZ.reset(); allExpData=null; allExpFile=null; document.getElementById('allExpBtn').disabled=true;
+  readBuf(file).then(buf=>{
+    try{
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array'});
+      const missing=['Team Data','Player Data'].filter(s=>!wb.SheetNames.includes(s));
+      if(missing.length) throw new Error(`Missing sheet${missing.length>1?'s':''}: ${missing.join(', ')}`);
+      const notEmpty=r=>Object.values(r).some(v=>String(v).trim()!=='');
+      const rawTeams=XLSX.utils.sheet_to_json(wb.Sheets['Team Data'],{defval:''});
+      const rawPlayers=XLSX.utils.sheet_to_json(wb.Sheets['Player Data'],{defval:''});
+      checkNoGaps(rawTeams,'Team Data');
+      checkNoGaps(rawPlayers,'Player Data');
+      const teams=rawTeams.filter(notEmpty);
+      const players=rawPlayers.filter(notEmpty);
+      validateTeamRows(teams);
+      validatePlayerRows(players);
+      validateAbvSync(teams, players);
+      allImpData={teams,players};
+      impDZ.setOk();
+      logMsg('ok','Import',`${teams.length} teams, ${players.length} players ready`);
+      document.getElementById('allImpBtn').disabled=false;
+    }catch(err){ impDZ.setErr(); logMsg('err','Import',err.message,err.details); }
+  });
+});
+document.getElementById('allImpBtn').addEventListener('click',()=>document.getElementById('allImpRomInput').click());
+document.getElementById('allImpRomInput').addEventListener('change',function(){
+  const file=this.files[0]; if(!file)return;
+  readBuf(file).then(buf=>{
+    try{
+      const data=new Uint8Array(buf);
+      const romCount=detectTeamCount(data);
+      if(romCount!==null&&romCount!==nTeams) throw new Error(`ROM contains ${romCount} teams but the toggle is set to ${nTeams}. Switch to ${romCount} Teams and retry.`);
+      const {teams,players}=allImpData;
+      const afterTeams=importTeams(buf,teams);
+      const afterPlayers=importPlayers(afterTeams.buffer,players);
+      dlBin(afterPlayers,`${stem(file.name)}_modified.bin`);
+      logMsg('ok','Import',`All data imported — ROM downloading`);
+    }catch(err){ logMsg('err','Import',err.message,err.details); }
+    this.value='';
+  });
+});
+</script>
+</body>
+</html>
